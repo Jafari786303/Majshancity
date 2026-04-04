@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Test</title>
+</head>
+
+<body style="text-align:center;font-family:Arial">
+
+<h2>Phone Camera Test</h2>
+<p>Press the button and allow camera permission.</p>
+
+<button onclick="startCamera()" style="padding:12px 20px;font-size:16px;">Start Camera</button>
+
+<br><br>
+
+<video id="video" autoplay playsinline style="width:90%;max-width:420px;border-radius:10px;"></video>
+
+<script>
+
+function startCamera(){
+
+navigator.mediaDevices.getUserMedia({
+video:{facingMode:"environment"}
+})
+.then(function(stream){
+
+document.getElementById("video").srcObject = stream;
+
+})
+.catch(function(err){
+
+alert("Camera error: " + err);
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
