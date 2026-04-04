@@ -3,57 +3,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shape Scanner Bank</title>
 <style>
-body{font-family:Arial;background:#0f172a;color:white;text-align:center}
-video{width:92%;max-width:420px;border-radius:12px;margin-top:10px}
-.overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:0 5%;pointer-events:none}
-.box{width:7vw;height:7vw;max-width:40px;max-height:40px;border:2px solid yellow;border-radius:50%}
-input,button{padding:10px;border-radius:10px;border:none;margin-top:10px;width:80%}
-.card{background:linear-gradient(135deg,#2563eb,#06b6d4);padding:15px;border-radius:15px;margin-top:10px;width:90%;max-width:380px;margin:auto;text-align:left}
+body{
+ margin:0;
+ font-family:Arial;
+ background:#0b1220;
+ color:white;
+}.header{ background:#1e293b; padding:15px; text-align:center; font-weight:bold; font-size:20px; }
+
+.container{ padding:15px; }
+
+.card{ background:linear-gradient(135deg,#1d4ed8,#06b6d4); padding:20px; border-radius:20px; margin-top:15px; box-shadow:0 10px 25px rgba(0,0,0,0.4); }
+
+input{ width:100%; padding:12px; margin-top:10px; border-radius:10px; border:none; outline:none; }
+
+button{ width:100%; padding:12px; margin-top:10px; border:none; border-radius:10px; background:#22c55e; color:white; font-weight:bold; }
+
+button.secondary{ background:#334155; }
+
+button.danger{ background:#ef4444; }
+
 .hidden{display:none}
+
+.balance{ font-size:22px; font-weight:bold; margin-top:10px; }
+
+.transfer-box{ background:#111827; padding:15px; border-radius:15px; margin-top:15px; }
+
 </style>
 </head>
-<body><h2>🔵🔺 Shape Scanner Bank</h2><div style="position:relative;display:inline-block">
-<video id="video" autoplay playsinline></video>
-<div class="overlay" id="overlay"></div>
-</div><div id="livebits">Pattern: --------</div>
-<div id="status"></div><input type="password" id="password" placeholder="Enter PIN"><div id="account" class="hidden">
-<div class="card" id="card"></div><input id="amount" type="number" placeholder="Amount">
-<input id="toCard" placeholder="Receiver Card Number"><button onclick="deposit()">Deposit</button> <button onclick="withdraw()">Withdraw</button> <button onclick="transfer()">Transfer</button>
+<body><div class="header">💳 Smart Banking App</div><div class="container"><div id="loginBox">
+ <input type="password" id="password" placeholder="Enter PIN">
+ <button onclick="login()">Login</button>
+</div><div id="app" class="hidden"> <div class="card" id="userCard"></div> <div class="transfer-box">
+  <h3>Transfer Money</h3>
+  <input id="toCard" placeholder="Receiver Card Number">
+  <input id="amount" type="number" placeholder="Amount">
+  <button onclick="transfer()">Send Money</button>
+ </div><button class="secondary" onclick="logout()">Logout</button>
 
-<button onclick="showJob()">Change Job</button>
-
-<div id="jobbox" class="hidden">
-<input id="newjob" placeholder="New Job">
-<button onclick="changeJob()">Update Job</button>
-</div><button onclick="showPin()">Change PIN</button>
-
-<div id="pinbox" class="hidden">
-<input id="oldpin" placeholder="Old PIN">
-<input id="newpin" placeholder="New PIN">
-<button onclick="changePin()">Update PIN</button>
 </div></div><canvas id="canvas" class="hidden"></canvas>
 
 <script>
 
-let overlay=document.getElementById("overlay")
-for(let i=0;i<8;i++){
- let b=document.createElement("div")
- b.className="box"
- overlay.appendChild(b)
-}
-
-let video=document.getElementById("video")
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(s=>video.srcObject=s)
-
 let db
+let current=null
+
 let req=indexedDB.open("ShapeBankDB",1)
 
 req.onupgradeneeded=e=>{
  db=e.target.result
  let s=db.createObjectStore("accounts",{keyPath:"card"})
 
- s.add({name:"Bank Minister",job:"Minister",balance:999999999,card:"9999",password:"9999",pattern:"11111111",unlimited:true,transactions:[]})
+ s.add({name:"Bank Minister",job:"Minister",balance:999999999,card:"9999",password:"9999",pattern:"11111111",transactions:[]})
  s.add({name:"Hassan Abbas",job:"Teacher",balance:10000,card:"4444",password:"4444",pattern:"10101010",transactions:[]})
  s.add({name:"Hussain Abbas",job:"Engineer",balance:7000,card:"5555",password:"5555",pattern:"11001100",transactions:[]})
  s.add({name:"Muhammad",job:"Student",balance:5000,card:"7777",password:"1234",pattern:"10101010",transactions:[]})
@@ -61,58 +61,8 @@ req.onupgradeneeded=e=>{
 
 req.onsuccess=e=>db=e.target.result
 
-let current=null
-let history=[]
-let last=""
-
-function scan(){
- if(video.videoWidth===0) return
- let canvas=document.getElementById("canvas")
- let ctx=canvas.getContext("2d")
- canvas.width=video.videoWidth
- canvas.height=video.videoHeight
- ctx.drawImage(video,0,0)
-
- let y=canvas.height/2
- let step=canvas.width/8
- let bits=""
-
- for(let i=0;i<8;i++){
-  let x=i*step+step/2
-  let r=0,g=0,b=0,count=0
-
-  for(let dx=-5;dx<=5;dx++){
-   for(let dy=-5;dy<=5;dy++){
-    let d=ctx.getImageData(x+dx,y+dy,1,1).data
-    r+=d[0]; g+=d[1]; b+=d[2]; count++
-   }
-  }
-
-  r/=count; g/=count; b/=count
-
-  if(b>r && b>g) bits+="1"
-  else if(r>g && r>b) bits+="0"
-  else bits+="-"
- }
-
- history.push(bits)
- if(history.length>3) history.shift()
-
- let stable = history.every(v=>v===bits)
-
- document.getElementById("livebits").innerText="Pattern: "+bits
-
- if(stable && bits!==last){
-  login(bits)
-  last=bits
- }
-}
-
-setInterval(scan,120)
-
-function login(p){
+function login(){
  let pass=document.getElementById("password").value
- if(!pass) return
 
  let tx=db.transaction("accounts","readonly")
  let store=tx.objectStore("accounts")
@@ -121,61 +71,36 @@ function login(p){
   let c=e.target.result
   if(c){
    let a=c.value
-
-   if(a.pattern===p && a.password===pass){
+   if(a.password===pass){
     current=a
-    document.getElementById("account").classList.remove("hidden")
-    updateCard()
+    showApp()
    }
    c.continue()
   }
  }
 }
 
-function updateCard(){
- document.getElementById("card").innerHTML = `
+function showApp(){
+ document.getElementById("loginBox").classList.add("hidden")
+ document.getElementById("app").classList.remove("hidden")
+ updateUI()
+}
+
+function updateUI(){
+ document.getElementById("userCard").innerHTML=`
  Name: ${current.name}<br>
  Job: ${current.job}<br>
- Balance: ${current.unlimited?"Unlimited":current.balance}<br>
+ <div class="balance">Balance: ${current.balance}</div>
  Card: ${current.card}
  `
-}
-
-function saveCurrent(){
- let tx=db.transaction("accounts","readwrite")
- let store=tx.objectStore("accounts")
- store.put(current)
- updateCard()
-}
-
-function addTransaction(type,amount){
- if(!current.transactions) current.transactions=[]
- current.transactions.push({type,amount,date:new Date().toLocaleString()})
-}
-
-function deposit(){
- let amt=parseInt(document.getElementById("amount").value)
- if(!amt) return
- current.balance+=amt
- addTransaction("Deposit",amt)
- saveCurrent()
-}
-
-function withdraw(){
- let amt=parseInt(document.getElementById("amount").value)
- if(!amt) return
- if(current.balance<amt){ alert("Insufficient balance"); return }
- current.balance-=amt
- addTransaction("Withdraw",amt)
- saveCurrent()
 }
 
 function transfer(){
  let amt=parseInt(document.getElementById("amount").value)
  let toCard=document.getElementById("toCard").value
 
- if(!amt || !toCard){ alert("Enter details"); return }
- if(current.balance<amt){ alert("Insufficient balance"); return }
+ if(!amt || !toCard){alert("Enter details");return}
+ if(current.balance<amt){alert("Insufficient balance");return}
 
  let tx=db.transaction("accounts","readwrite")
  let store=tx.objectStore("accounts")
@@ -184,45 +109,21 @@ function transfer(){
 
  req.onsuccess=e=>{
   let receiver=e.target.result
-  if(!receiver){ alert("Receiver not found"); return }
+  if(!receiver){alert("Receiver not found");return}
 
   current.balance-=amt
   receiver.balance+=amt
 
-  addTransaction("Transfer Sent",amt)
-
-  if(!receiver.transactions) receiver.transactions=[]
-  receiver.transactions.push({
-   type:"Transfer Received",
-   amount:amt,
-   from:current.card,
-   date:new Date().toLocaleString()
-  })
-
   store.put(current)
   store.put(receiver)
 
-  updateCard()
+  updateUI()
   alert("Transfer Successful")
  }
 }
 
-function showJob(){ document.getElementById("jobbox").classList.remove("hidden") }
-function changeJob(){
- let j=document.getElementById("newjob").value
- if(!j){alert("Enter job");return}
- current.job=j
- saveCurrent()
-}
-
-function showPin(){ document.getElementById("pinbox").classList.remove("hidden") }
-function changePin(){
- let oldp=document.getElementById("oldpin").value
- let newp=document.getElementById("newpin").value
- if(current.password!==oldp){ alert("Wrong PIN"); return }
- current.password=newp
- saveCurrent()
- alert("PIN Updated")
+function logout(){
+ location.reload()
 }
 
 </script></body>
