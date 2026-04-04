@@ -18,8 +18,9 @@ input,button{padding:10px;border-radius:10px;border:none;margin-top:10px;width:8
 </div><div id="livebits">Pattern: --------</div>
 <div id="status"></div><input type="password" id="password" placeholder="Enter PIN"><div id="account" class="hidden">
 <div class="card" id="card"></div><input id="amount" type="number" placeholder="Amount">
-<button onclick="deposit()">Deposit</button>
-<button onclick="withdraw()">Withdraw</button><button onclick="showJob()">Change Job</button>
+<input id="toCard" placeholder="Receiver Card Number"><button onclick="deposit()">Deposit</button> <button onclick="withdraw()">Withdraw</button> <button onclick="transfer()">Transfer</button>
+
+<button onclick="showJob()">Change Job</button>
 
 <div id="jobbox" class="hidden">
 <input id="newjob" placeholder="New Job">
@@ -34,7 +35,6 @@ input,button{padding:10px;border-radius:10px;border:none;margin-top:10px;width:8
 
 <script>
 
-/* overlay */
 let overlay=document.getElementById("overlay")
 for(let i=0;i<8;i++){
  let b=document.createElement("div")
@@ -42,12 +42,10 @@ for(let i=0;i<8;i++){
  overlay.appendChild(b)
 }
 
-/* camera */
 let video=document.getElementById("video")
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(s=>video.srcObject=s)
 
-/* DB */
 let db
 let req=indexedDB.open("ShapeBankDB",1)
 
@@ -57,7 +55,7 @@ req.onupgradeneeded=e=>{
 
  s.add({name:"Bank Minister",job:"Minister",balance:999999999,card:"9999",password:"9999",pattern:"11111111",unlimited:true,transactions:[]})
  s.add({name:"Hassan Abbas",job:"Teacher",balance:10000,card:"4444",password:"4444",pattern:"10101010",transactions:[]})
- s.add({name:"Hussain Abbas",job:"Engineer",balance:7000,card:"5555",password:"5555",pattern:"10100101",transactions:[]})
+ s.add({name:"Hussain Abbas",job:"Engineer",balance:7000,card:"5555",password:"5555",pattern:"11001100",transactions:[]})
  s.add({name:"Muhammad",job:"Student",balance:5000,card:"7777",password:"1234",pattern:"10101010",transactions:[]})
 }
 
@@ -67,7 +65,6 @@ let current=null
 let history=[]
 let last=""
 
-/* SCAN */
 function scan(){
  if(video.videoWidth===0) return
  let canvas=document.getElementById("canvas")
@@ -113,7 +110,6 @@ function scan(){
 
 setInterval(scan,120)
 
-/* LOGIN */
 function login(p){
  let pass=document.getElementById("password").value
  if(!pass) return
@@ -136,7 +132,6 @@ function login(p){
  }
 }
 
-/* UPDATE */
 function updateCard(){
  document.getElementById("card").innerHTML = `
  Name: ${current.name}<br>
@@ -146,7 +141,6 @@ function updateCard(){
  `
 }
 
-/* SAVE */
 function saveCurrent(){
  let tx=db.transaction("accounts","readwrite")
  let store=tx.objectStore("accounts")
@@ -154,7 +148,6 @@ function saveCurrent(){
  updateCard()
 }
 
-/* TRANSACTIONS */
 function addTransaction(type,amount){
  if(!current.transactions) current.transactions=[]
  current.transactions.push({type,amount,date:new Date().toLocaleString()})
@@ -177,10 +170,44 @@ function withdraw(){
  saveCurrent()
 }
 
-/* JOB */
-function showJob(){
- document.getElementById("jobbox").classList.remove("hidden")
+function transfer(){
+ let amt=parseInt(document.getElementById("amount").value)
+ let toCard=document.getElementById("toCard").value
+
+ if(!amt || !toCard){ alert("Enter details"); return }
+ if(current.balance<amt){ alert("Insufficient balance"); return }
+
+ let tx=db.transaction("accounts","readwrite")
+ let store=tx.objectStore("accounts")
+
+ let req=store.get(toCard)
+
+ req.onsuccess=e=>{
+  let receiver=e.target.result
+  if(!receiver){ alert("Receiver not found"); return }
+
+  current.balance-=amt
+  receiver.balance+=amt
+
+  addTransaction("Transfer Sent",amt)
+
+  if(!receiver.transactions) receiver.transactions=[]
+  receiver.transactions.push({
+   type:"Transfer Received",
+   amount:amt,
+   from:current.card,
+   date:new Date().toLocaleString()
+  })
+
+  store.put(current)
+  store.put(receiver)
+
+  updateCard()
+  alert("Transfer Successful")
+ }
 }
+
+function showJob(){ document.getElementById("jobbox").classList.remove("hidden") }
 function changeJob(){
  let j=document.getElementById("newjob").value
  if(!j){alert("Enter job");return}
@@ -188,10 +215,7 @@ function changeJob(){
  saveCurrent()
 }
 
-/* PIN */
-function showPin(){
- document.getElementById("pinbox").classList.remove("hidden")
-}
+function showPin(){ document.getElementById("pinbox").classList.remove("hidden") }
 function changePin(){
  let oldp=document.getElementById("oldpin").value
  let newp=document.getElementById("newpin").value
