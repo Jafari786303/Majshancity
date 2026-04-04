@@ -1,23 +1,61 @@
-
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circle Line Scanner Bank</title>
+
 <style>
-body{font-family:Arial;background:#0f172a;color:white;text-align:center}
-video,canvas{width:92%;max-width:420px;border-radius:12px;margin-top:10px}
-button{padding:12px 20px;border:none;border-radius:10px;background:#22c55e;color:black;font-weight:bold;margin-top:10px}
-input{padding:10px;border-radius:10px;border:none;margin-top:10px;width:80%}
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+text-align:center
+}
+
+video,canvas{
+width:92%;
+max-width:420px;
+border-radius:12px;
+margin-top:10px
+}
+
+button{
+padding:12px 20px;
+border:none;
+border-radius:10px;
+background:#22c55e;
+color:black;
+font-weight:bold;
+margin-top:10px
+}
+
+input{
+padding:10px;
+border-radius:10px;
+border:none;
+margin-top:10px;
+width:80%
+}
+
 .card{
 background:linear-gradient(135deg,#2563eb,#06b6d4);
-padding:20px;border-radius:18px;margin-top:15px;width:90%;max-width:380px;margin-left:auto;margin-right:auto;text-align:left
+padding:20px;
+border-radius:18px;
+margin-top:15px;
+width:90%;
+max-width:380px;
+margin-left:auto;
+margin-right:auto;
+text-align:left
 }
+
 .hidden{display:none}
+
 .scanline{
 position:relative;
 display:inline-block;
 }
+
 .line{
 position:absolute;
 left:0;
@@ -31,8 +69,8 @@ background:red;
 
 <body>
 
-<h2>Circle Line Scanner</h2>
-<p>Show a row of filled (1) and empty (0) circles to the camera.</p>
+<h2>Circle Line Scanner Bank</h2>
+<p>Show filled (1) and empty (0) circles to login</p>
 
 <div class="scanline">
 <video id="video" autoplay playsinline></video>
@@ -45,19 +83,28 @@ background:red;
 <canvas id="canvas" class="hidden"></canvas>
 
 <br>
-<input type="password" id="password" placeholder="Password">
+<input type="password" id="password" placeholder="PIN">
 
 <div id="account" class="hidden">
+
 <h2>Account Card</h2>
 <div class="card" id="card"></div>
 
 <button onclick="showTx()">Transaction</button>
+<button onclick="showPin()">Change PIN</button>
 
 <div id="tx" class="hidden">
 <input id="receiver" placeholder="Receiver Card No">
 <input id="amount" placeholder="Amount">
 <button onclick="send()">Send</button>
 </div>
+
+<div id="pinbox" class="hidden">
+<input id="oldpin" placeholder="Old PIN">
+<input id="newpin" placeholder="New PIN">
+<button onclick="changePin()">Update PIN</button>
+</div>
+
 </div>
 
 <script>
@@ -68,14 +115,48 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream=>{video.srcObject=stream})
 
 let db
-let req=indexedDB.open("MiniBankDB2",1)
+let req=indexedDB.open("MiniBankDB3",1)
 
 req.onupgradeneeded=e=>{
 db=e.target.result
 let s=db.createObjectStore("accounts",{keyPath:"card"})
-s.add({name:"Muhammad Abbas",job:"Programmer",balance:10000,cl:"White List",card:"1111",national:"35202-0000000-1",password:"1234",pattern:"11110000"})
-s.add({name:"Hassan Abbas",job:"Teacher",balance:8000,cl:"White List",card:"2222",national:"35202-0000000-2",password:"2222",pattern:"11001100"})
-s.add({name:"Hussain Abbas",job:"Engineer",balance:5000,cl:"White List",card:"3333",national:"35202-0000000-3",password:"3333",pattern:"10101010"})
+
+/* NEW ACCOUNTS */
+
+s.add({
+name:"Bank Minister",
+job:"Minister",
+balance:999999999,
+cl:"Elite",
+card:"9999",
+national:"00000-0000000-0",
+password:"9999",
+pattern:"11111111",
+unlimited:true
+})
+
+s.add({
+name:"Hassan Abbas",
+job:"Teacher",
+balance:10000,
+cl:"White List",
+card:"4444",
+national:"35202-0000000-4",
+password:"4444",
+pattern:"11000011"
+})
+
+s.add({
+name:"Hussain Abbas",
+job:"Engineer",
+balance:7000,
+cl:"White List",
+card:"5555",
+national:"35202-0000000-5",
+password:"5555",
+pattern:"10100101"
+})
+
 }
 
 req.onsuccess=e=>{db=e.target.result}
@@ -96,25 +177,30 @@ let y=Math.floor(canvas.height/2)
 let width=canvas.width
 
 let bits=""
-
-let segments=8  // number of circles expected
+let segments=8
 let step=Math.floor(width/segments)
 
 for(let i=0;i<segments;i++){
 
 let x=Math.floor(i*step + step/2)
 
-let data=ctx.getImageData(x,y,1,1).data
+let sum=0
 
-let brightness=(data[0]+data[1]+data[2])/3
+for(let dx=-1; dx<=1; dx++){
+for(let dy=-1; dy<=1; dy++){
+let d=ctx.getImageData(x+dx,y+dy,1,1).data
+sum += (d[0]+d[1]+d[2])/3
+}
+}
 
-if(brightness<120) bits+="1"
+let avg=sum/9
+
+if(avg<120) bits+="1"
 else bits+="0"
 
 }
 
 login(bits)
-
 }
 
 function login(p){
@@ -141,11 +227,8 @@ showCard()
 }
 
 cursor.continue()
-
 }
-
 }
-
 }
 
 function showCard(){
@@ -156,15 +239,16 @@ c.innerHTML=`
 Name<br>${current.name}<br><br>
 Job<br>${current.job}<br><br>
 Balance<br>${current.balance}<br><br>
-CL<br>${current.cl}<br><br>
-Card No<br>${current.card}<br><br>
-National No<br>${current.national}
+Card No<br>${current.card}
 `
-
 }
 
 function showTx(){
 document.getElementById("tx").classList.remove("hidden")
+}
+
+function showPin(){
+document.getElementById("pinbox").classList.remove("hidden")
 }
 
 function send(){
@@ -181,15 +265,26 @@ let r=store.get(rec)
 s.onsuccess=()=>{
 
 let sender=s.result
-if(sender.balance<amt){alert("Not enough balance");return}
+
+if(!sender.unlimited && sender.balance<amt){
+alert("Not enough balance")
+return
+}
 
 r.onsuccess=()=>{
 
 let receiver=r.result
-if(!receiver){alert("Receiver not found");return}
 
-sender.balance-=amt
-receiver.balance+=amt
+if(!receiver){
+alert("Receiver not found")
+return
+}
+
+if(!sender.unlimited){
+sender.balance -= amt
+}
+
+receiver.balance += amt
 
 store.put(sender)
 store.put(receiver)
@@ -198,11 +293,27 @@ current=sender
 showCard()
 
 alert("Transaction success")
-
+}
+}
 }
 
+function changePin(){
+
+let oldp=document.getElementById("oldpin").value
+let newp=document.getElementById("newpin").value
+
+if(oldp !== current.password){
+alert("Wrong old PIN")
+return
 }
 
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+current.password=newp
+store.put(current)
+
+alert("PIN Updated Successfully")
 }
 
 </script>
