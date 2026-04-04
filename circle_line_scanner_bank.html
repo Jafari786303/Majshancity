@@ -1,0 +1,211 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle Line Scanner Bank</title>
+<style>
+body{font-family:Arial;background:#0f172a;color:white;text-align:center}
+video,canvas{width:92%;max-width:420px;border-radius:12px;margin-top:10px}
+button{padding:12px 20px;border:none;border-radius:10px;background:#22c55e;color:black;font-weight:bold;margin-top:10px}
+input{padding:10px;border-radius:10px;border:none;margin-top:10px;width:80%}
+.card{
+background:linear-gradient(135deg,#2563eb,#06b6d4);
+padding:20px;border-radius:18px;margin-top:15px;width:90%;max-width:380px;margin-left:auto;margin-right:auto;text-align:left
+}
+.hidden{display:none}
+.scanline{
+position:relative;
+display:inline-block;
+}
+.line{
+position:absolute;
+left:0;
+right:0;
+top:50%;
+height:2px;
+background:red;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Circle Line Scanner</h2>
+<p>Show a row of filled (1) and empty (0) circles to the camera.</p>
+
+<div class="scanline">
+<video id="video" autoplay playsinline></video>
+<div class="line"></div>
+</div>
+
+<br>
+<button onclick="scan()">Scan Line</button>
+
+<canvas id="canvas" class="hidden"></canvas>
+
+<br>
+<input type="password" id="password" placeholder="Password">
+
+<div id="account" class="hidden">
+<h2>Account Card</h2>
+<div class="card" id="card"></div>
+
+<button onclick="showTx()">Transaction</button>
+
+<div id="tx" class="hidden">
+<input id="receiver" placeholder="Receiver Card No">
+<input id="amount" placeholder="Amount">
+<button onclick="send()">Send</button>
+</div>
+</div>
+
+<script>
+
+let video=document.getElementById("video")
+
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+.then(stream=>{video.srcObject=stream})
+
+let db
+let req=indexedDB.open("MiniBankDB2",1)
+
+req.onupgradeneeded=e=>{
+db=e.target.result
+let s=db.createObjectStore("accounts",{keyPath:"card"})
+s.add({name:"Muhammad Abbas",job:"Programmer",balance:10000,cl:"White List",card:"1111",national:"35202-0000000-1",password:"1234",pattern:"11110000"})
+s.add({name:"Hassan Abbas",job:"Teacher",balance:8000,cl:"White List",card:"2222",national:"35202-0000000-2",password:"2222",pattern:"11001100"})
+s.add({name:"Hussain Abbas",job:"Engineer",balance:5000,cl:"White List",card:"3333",national:"35202-0000000-3",password:"3333",pattern:"10101010"})
+}
+
+req.onsuccess=e=>{db=e.target.result}
+
+let current
+
+function scan(){
+
+let canvas=document.getElementById("canvas")
+let ctx=canvas.getContext("2d")
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+ctx.drawImage(video,0,0)
+
+let y=Math.floor(canvas.height/2)
+let width=canvas.width
+
+let bits=""
+
+let segments=8  // number of circles expected
+let step=Math.floor(width/segments)
+
+for(let i=0;i<segments;i++){
+
+let x=Math.floor(i*step + step/2)
+
+let data=ctx.getImageData(x,y,1,1).data
+
+let brightness=(data[0]+data[1]+data[2])/3
+
+if(brightness<120) bits+="1"
+else bits+="0"
+
+}
+
+login(bits)
+
+}
+
+function login(p){
+
+let pass=document.getElementById("password").value
+
+let tx=db.transaction("accounts","readonly")
+let store=tx.objectStore("accounts")
+
+store.openCursor().onsuccess=e=>{
+
+let cursor=e.target.result
+
+if(cursor){
+
+let acc=cursor.value
+
+if(acc.pattern===p && acc.password===pass){
+
+current=acc
+document.getElementById("account").classList.remove("hidden")
+showCard()
+
+}
+
+cursor.continue()
+
+}
+
+}
+
+}
+
+function showCard(){
+
+let c=document.getElementById("card")
+
+c.innerHTML=`
+Name<br>${current.name}<br><br>
+Job<br>${current.job}<br><br>
+Balance<br>${current.balance}<br><br>
+CL<br>${current.cl}<br><br>
+Card No<br>${current.card}<br><br>
+National No<br>${current.national}
+`
+
+}
+
+function showTx(){
+document.getElementById("tx").classList.remove("hidden")
+}
+
+function send(){
+
+let rec=document.getElementById("receiver").value
+let amt=parseInt(document.getElementById("amount").value)
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+let s=store.get(current.card)
+let r=store.get(rec)
+
+s.onsuccess=()=>{
+
+let sender=s.result
+if(sender.balance<amt){alert("Not enough balance");return}
+
+r.onsuccess=()=>{
+
+let receiver=r.result
+if(!receiver){alert("Receiver not found");return}
+
+sender.balance-=amt
+receiver.balance+=amt
+
+store.put(sender)
+store.put(receiver)
+
+current=sender
+showCard()
+
+alert("Transaction success")
+
+}
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
