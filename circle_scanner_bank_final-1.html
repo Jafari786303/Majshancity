@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circle Scanner Bank</title>
+<style>
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+margin:0;
+padding:0;
+}
+
+#camera{
+width:100%;
+max-width:420px;
+border-radius:10px;
+margin-top:10px;
+}
+
+button{
+padding:10px 18px;
+margin:6px;
+border:none;
+border-radius:6px;
+background:#0a84ff;
+color:white;
+font-size:16px;
+}
+
+input{
+padding:8px;
+margin:6px;
+border-radius:6px;
+border:none;
+}
+
+.card{
+width:300px;
+margin:auto;
+margin-top:20px;
+background:linear-gradient(135deg,#1e3c72,#2a5298);
+padding:20px;
+border-radius:16px;
+text-align:left;
+box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+
+.title{
+font-weight:bold;
+margin-top:6px;
+}
+
+#scanLine{
+position:absolute;
+width:100%;
+height:2px;
+background:red;
+top:50%;
+left:0;
+}
+
+#videoWrap{
+position:relative;
+display:inline-block;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Circle Pattern Bank Login</h2>
+
+<div id="videoWrap">
+<video id="camera" autoplay playsinline></video>
+<div id="scanLine"></div>
+</div>
+
+<br>
+
+<button onclick="startCamera()">Start Scanner</button>
+<button onclick="stopCamera()">Stop Scanner</button>
+
+<br>
+
+<div>
+<input id="passwordInput" placeholder="Enter password">
+<button onclick="login()">Login</button>
+</div>
+
+<div id="accountArea" style="display:none">
+
+<div class="card">
+<div class="title">Name</div>
+<div id="name"></div>
+
+<div class="title">Job</div>
+<div id="job"></div>
+
+<div class="title">Balance</div>
+<div id="balance"></div>
+
+<div class="title">CL</div>
+<div id="cl"></div>
+
+<div class="title">Card No</div>
+<div id="card"></div>
+
+<div class="title">National No</div>
+<div id="national"></div>
+</div>
+
+<h3>Account Settings</h3>
+
+<input id="newPass" placeholder="New Password">
+<button onclick="changePass()">Change Password</button>
+<br>
+
+<input id="newPattern" placeholder="New Pattern (like 10101010)">
+<button onclick="changePattern()">Change Pattern</button>
+<br>
+
+<input id="newCard" placeholder="New Card Number">
+<button onclick="changeCard()">Change Card Number</button>
+
+<h3>Transaction</h3>
+
+<input id="targetCard" placeholder="Receiver Card">
+<input id="amount" placeholder="Amount">
+<button onclick="sendMoney()">Send</button>
+
+</div>
+
+<script>
+
+let stream=null
+let detectedPattern=""
+
+let db
+
+function initDB(){
+
+let request=indexedDB.open("CircleBankDB",1)
+
+request.onupgradeneeded=function(e){
+
+db=e.target.result
+
+let store=db.createObjectStore("accounts",{keyPath:"name"})
+
+store.put({
+name:"Muhammad Abbas",
+job:"Engineer",
+balance:1000,
+cl:"White List",
+card:"1111222233334444",
+national:"ABC123",
+password:"1234",
+pattern:"00001111"
+})
+
+}
+
+request.onsuccess=function(e){
+db=e.target.result
+}
+
+}
+
+initDB()
+
+async function startCamera(){
+
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+
+document.getElementById("camera").srcObject=stream
+
+scanLoop()
+
+}
+
+function stopCamera(){
+
+if(stream){
+stream.getTracks().forEach(t=>t.stop())
+}
+
+}
+
+function scanLoop(){
+
+let video=document.getElementById("camera")
+
+let canvas=document.createElement("canvas")
+let ctx=canvas.getContext("2d")
+
+setInterval(()=>{
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+ctx.drawImage(video,0,0)
+
+let y=Math.floor(canvas.height/2)
+
+let segments=8
+let segmentWidth=canvas.width/segments
+
+let bits=""
+
+for(let i=0;i<segments;i++){
+
+let x=Math.floor(i*segmentWidth+segmentWidth/2)
+
+let pixel=ctx.getImageData(x,y,1,1).data
+
+let brightness=(pixel[0]+pixel[1]+pixel[2])/3
+
+if(brightness<120){
+bits+="1"
+}else{
+bits+="0"
+}
+
+}
+
+detectedPattern=bits
+
+},800)
+
+}
+
+function login(){
+
+let pass=document.getElementById("passwordInput").value
+
+let tx=db.transaction("accounts","readonly")
+let store=tx.objectStore("accounts")
+
+store.get("Muhammad Abbas").onsuccess=function(e){
+
+let acc=e.target.result
+
+if(acc.pattern===detectedPattern && acc.password===pass){
+
+document.getElementById("accountArea").style.display="block"
+
+document.getElementById("name").innerText=acc.name
+document.getElementById("job").innerText=acc.job
+document.getElementById("balance").innerText=acc.balance
+document.getElementById("cl").innerText=acc.cl
+document.getElementById("card").innerText=acc.card
+document.getElementById("national").innerText=acc.national
+
+alert("Login success")
+
+}else{
+
+alert("Pattern or password wrong")
+
+}
+
+}
+
+}
+
+function updateAccount(acc){
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+store.put(acc)
+
+}
+
+function changePass(){
+
+let newPass=document.getElementById("newPass").value
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+store.get("Muhammad Abbas").onsuccess=function(e){
+
+let acc=e.target.result
+acc.password=newPass
+updateAccount(acc)
+
+alert("Password updated")
+
+}
+
+}
+
+function changePattern(){
+
+let p=document.getElementById("newPattern").value
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+store.get("Muhammad Abbas").onsuccess=function(e){
+
+let acc=e.target.result
+acc.pattern=p
+updateAccount(acc)
+
+alert("Pattern updated")
+
+}
+
+}
+
+function changeCard(){
+
+let c=document.getElementById("newCard").value
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+store.get("Muhammad Abbas").onsuccess=function(e){
+
+let acc=e.target.result
+acc.card=c
+updateAccount(acc)
+
+document.getElementById("card").innerText=c
+
+alert("Card number updated")
+
+}
+
+}
+
+function sendMoney(){
+
+let amount=parseFloat(document.getElementById("amount").value)
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+store.get("Muhammad Abbas").onsuccess=function(e){
+
+let acc=e.target.result
+
+if(acc.balance>=amount){
+
+acc.balance-=amount
+updateAccount(acc)
+
+document.getElementById("balance").innerText=acc.balance
+
+alert("Transaction done")
+
+}else{
+
+alert("Not enough balance")
+
+}
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
