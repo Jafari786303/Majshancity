@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Easy Scanner Bank</title>
+<title>Shape Scanner Bank</title>
 
 <style>
 body{font-family:Arial;background:#0f172a;color:white;text-align:center}
@@ -21,14 +21,17 @@ left:0;
 right:0;
 bottom:0;
 display:flex;
-justify-content:space-around;
+justify-content:space-between;
 align-items:center;
+padding:0 5%;
 pointer-events:none;
 }
 
 .box{
-width:30px;
-height:30px;
+width:7vw;
+height:7vw;
+max-width:40px;
+max-height:40px;
 border:2px solid yellow;
 border-radius:50%;
 }
@@ -58,29 +61,35 @@ text-align:left
 
 <body>
 
-<h2>Easy Auto Scanner Bank</h2>
+<h2>🔵🔺 Shape Scanner Bank</h2>
 
 <div style="position:relative;display:inline-block">
-
 <video id="video" autoplay playsinline></video>
-
 <div class="overlay" id="overlay"></div>
-
 </div>
 
 <div id="livebits">Pattern: --------</div>
+<div id="status"></div>
 
-<input type="password" id="password" placeholder="PIN">
+<input type="password" id="password" placeholder="Enter PIN">
 
 <div id="account" class="hidden">
 <div class="card" id="card"></div>
+
+<button onclick="showJob()">Change Job</button>
+
+<div id="jobbox" class="hidden">
+<input id="newjob" placeholder="New Job">
+<button onclick="changeJob()">Update</button>
+</div>
+
 </div>
 
 <canvas id="canvas" class="hidden"></canvas>
 
 <script>
 
-/* create visual guide */
+/* overlay circles */
 let overlay=document.getElementById("overlay")
 for(let i=0;i<8;i++){
 let b=document.createElement("div")
@@ -88,32 +97,31 @@ b.className="box"
 overlay.appendChild(b)
 }
 
+/* camera */
 let video=document.getElementById("video")
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(s=>video.srcObject=s)
 
 /* DB */
 let db
-let req=indexedDB.open("MiniBankDB6",1)
+let req=indexedDB.open("ShapeBankDB",1)
 
 req.onupgradeneeded=e=>{
 db=e.target.result
 let s=db.createObjectStore("accounts",{keyPath:"card"})
 
 s.add({name:"Bank Minister",job:"Minister",balance:999999999,card:"9999",password:"9999",pattern:"11111111",unlimited:true})
-s.add({name:"Hassan Abbas",job:"Teacher",balance:10000,card:"4444",password:"4444",pattern:"11000011"})
-s.add({name:"Hussain Abbas",job:"Engineer",balance:7000,card:"5555",password:"5555",pattern:"10100101"})
+s.add({name:"Hassan Abbas",job:"Teacher",balance:10000,card:"4444",password:"4444",pattern:"10101010"})
+s.add({name:"Hussain Abbas",job:"Engineer",balance:7000,card:"5555",password:"5555",pattern:"11001100"})
 }
 
 req.onsuccess=e=>db=e.target.result
 
 let current=null
-
-/* SMART EASY SCANNER */
-
-let stable=[]
+let history=[]
 let last=""
 
+/* SCANNER */
 function scan(){
 
 if(video.videoWidth===0) return
@@ -131,53 +139,49 @@ let step=canvas.width/8
 
 let bits=""
 
-/* dynamic threshold */
-let base=0
-for(let i=0;i<8;i++){
-let x=i*step+step/2
-let d=ctx.getImageData(x,y,1,1).data
-base+=(d[0]+d[1]+d[2])/3
-}
-let threshold=(base/8)
-
 for(let i=0;i<8;i++){
 
 let x=i*step+step/2
 
-let sum=0
+let r=0,g=0,b=0,count=0
 
-/* BIG AREA sampling */
 for(let dx=-5;dx<=5;dx++){
 for(let dy=-5;dy<=5;dy++){
 let d=ctx.getImageData(x+dx,y+dy,1,1).data
-sum+=(d[0]+d[1]+d[2])/3
+r+=d[0]; g+=d[1]; b+=d[2]
+count++
 }
 }
 
-let avg=sum/121
+r/=count; g/=count; b/=count
 
-if(avg<threshold) bits+="1"
-else bits+="0"
+/* COLOR DETECTION */
+if(b>r && b>g){
+bits+="1"   // blue circle
+}else if(r>g && r>b){
+bits+="0"   // red triangle
+}else{
+bits+="-"
+}
 }
 
 /* stability */
-stable.push(bits)
-if(stable.length>3) stable.shift()
+history.push(bits)
+if(history.length>3) history.shift()
 
-let ok=stable.every(v=>v===bits)
+let stable = history.every(v=>v===bits)
 
 document.getElementById("livebits").innerText="Pattern: "+bits
 
-if(ok && bits!==last){
+if(stable && bits!==last){
 login(bits)
 last=bits
 }
 }
 
-setInterval(scan,100)
+setInterval(scan,120)
 
 /* LOGIN */
-
 function login(p){
 
 let pass=document.getElementById("password").value
@@ -201,7 +205,8 @@ document.getElementById("account").classList.remove("hidden")
 document.getElementById("card").innerHTML=`
 Name: ${a.name}<br>
 Job: ${a.job}<br>
-Balance: ${a.unlimited?"Unlimited":a.balance}
+Balance: ${a.unlimited?"Unlimited":a.balance}<br>
+Card: ${a.card}
 `
 }
 
@@ -209,6 +214,29 @@ c.continue()
 }
 }
 }
+
+/* JOB CHANGE */
+function showJob(){
+document.getElementById("jobbox").classList.remove("hidden")
+}
+
+function changeJob(){
+
+let j=document.getElementById("newjob").value
+
+if(!j){alert("Enter job");return}
+
+let tx=db.transaction("accounts","readwrite")
+let store=tx.objectStore("accounts")
+
+current.job=j
+store.put(current)
+
+alert("Job Updated")
+}
+
+/* AUTO SCAN */
+setInterval(scan,120)
 
 </script>
 
