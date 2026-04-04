@@ -2,15 +2,10 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circle Line Scanner Bank</title>
+<title>Easy Scanner Bank</title>
 
 <style>
-body{
-font-family:Arial;
-background:#0f172a;
-color:white;
-text-align:center
-}
+body{font-family:Arial;background:#0f172a;color:white;text-align:center}
 
 video{
 width:92%;
@@ -19,16 +14,26 @@ border-radius:12px;
 margin-top:10px
 }
 
-button{
-padding:10px;
-border:none;
-border-radius:10px;
-background:#22c55e;
-color:black;
-margin-top:10px
+.overlay{
+position:absolute;
+top:0;
+left:0;
+right:0;
+bottom:0;
+display:flex;
+justify-content:space-around;
+align-items:center;
+pointer-events:none;
 }
 
-input{
+.box{
+width:30px;
+height:30px;
+border:2px solid yellow;
+border-radius:50%;
+}
+
+input,button{
 padding:10px;
 border-radius:10px;
 border:none;
@@ -48,69 +53,48 @@ text-align:left
 }
 
 .hidden{display:none}
-
-.line{
-position:absolute;
-top:50%;
-left:0;
-right:0;
-height:2px;
-background:red;
-}
 </style>
 </head>
 
 <body>
 
-<h2>Auto Circle Scanner Bank</h2>
+<h2>Easy Auto Scanner Bank</h2>
 
 <div style="position:relative;display:inline-block">
+
 <video id="video" autoplay playsinline></video>
-<div class="line"></div>
+
+<div class="overlay" id="overlay"></div>
+
 </div>
 
-<div id="livebits" style="margin-top:10px;font-size:18px;color:#22c55e">
-Pattern: --------
-</div>
+<div id="livebits">Pattern: --------</div>
 
-<div id="confidence" style="font-size:14px;color:#ccc"></div>
-
-<input type="password" id="password" placeholder="Enter PIN">
+<input type="password" id="password" placeholder="PIN">
 
 <div id="account" class="hidden">
-<h3>Account</h3>
 <div class="card" id="card"></div>
-
-<button onclick="showTx()">Transaction</button>
-<button onclick="showPin()">Change PIN</button>
-<button onclick="showAll()">All Accounts</button>
-
-<div id="tx" class="hidden">
-<input id="receiver" placeholder="Receiver Card">
-<input id="amount" placeholder="Amount">
-<button onclick="send()">Send</button>
-</div>
-
-<div id="pinbox" class="hidden">
-<input id="oldpin" placeholder="Old PIN">
-<input id="newpin" placeholder="New PIN">
-<button onclick="changePin()">Update PIN</button>
-</div>
-
-<div id="allaccounts" class="hidden"></div>
-
 </div>
 
 <canvas id="canvas" class="hidden"></canvas>
 
 <script>
 
+/* create visual guide */
+let overlay=document.getElementById("overlay")
+for(let i=0;i<8;i++){
+let b=document.createElement("div")
+b.className="box"
+overlay.appendChild(b)
+}
+
 let video=document.getElementById("video")
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(s=>video.srcObject=s)
 
+/* DB */
 let db
-let req=indexedDB.open("MiniBankDB4",1)
+let req=indexedDB.open("MiniBankDB6",1)
 
 req.onupgradeneeded=e=>{
 db=e.target.result
@@ -125,11 +109,10 @@ req.onsuccess=e=>db=e.target.result
 
 let current=null
 
-/* ===== SMART SCANNER ===== */
+/* SMART EASY SCANNER */
 
-let history=[]
-let stablePattern=""
-let lastLogin=""
+let stable=[]
+let last=""
 
 function scan(){
 
@@ -143,69 +126,57 @@ canvas.height=video.videoHeight
 
 ctx.drawImage(video,0,0)
 
-let y=Math.floor(canvas.height/2)
-let width=canvas.width
+let y=canvas.height/2
+let step=canvas.width/8
 
 let bits=""
-let segments=8
-let step=Math.floor(width/segments)
 
-/* adaptive brightness */
-let globalSum=0
-
-for(let i=0;i<20;i++){
-let d=ctx.getImageData(i*10,y,1,1).data
-globalSum+=(d[0]+d[1]+d[2])/3
+/* dynamic threshold */
+let base=0
+for(let i=0;i<8;i++){
+let x=i*step+step/2
+let d=ctx.getImageData(x,y,1,1).data
+base+=(d[0]+d[1]+d[2])/3
 }
+let threshold=(base/8)
 
-let threshold=(globalSum/20) - 20
+for(let i=0;i<8;i++){
 
-for(let i=0;i<segments;i++){
-
-let x=Math.floor(i*step + step/2)
+let x=i*step+step/2
 
 let sum=0
 
-for(let dx=-2; dx<=2; dx++){
-for(let dy=-2; dy<=2; dy++){
+/* BIG AREA sampling */
+for(let dx=-5;dx<=5;dx++){
+for(let dy=-5;dy<=5;dy++){
 let d=ctx.getImageData(x+dx,y+dy,1,1).data
 sum+=(d[0]+d[1]+d[2])/3
 }
 }
 
-let avg=sum/25
+let avg=sum/121
 
 if(avg<threshold) bits+="1"
 else bits+="0"
 }
 
-/* smoothing */
-history.push(bits)
-if(history.length>5) history.shift()
+/* stability */
+stable.push(bits)
+if(stable.length>3) stable.shift()
 
-let count={}
-history.forEach(b=>count[b]=(count[b]||0)+1)
+let ok=stable.every(v=>v===bits)
 
-stablePattern=Object.keys(count).sort((a,b)=>count[b]-count[a])[0]
+document.getElementById("livebits").innerText="Pattern: "+bits
 
-/* confidence */
-let conf=count[stablePattern]/history.length
-
-document.getElementById("livebits").innerText="Pattern: "+stablePattern
-document.getElementById("confidence").innerText="Confidence: "+Math.round(conf*100)+"%"
-
-/* auto login */
-if(conf>0.7 && stablePattern!==lastLogin){
-login(stablePattern)
-lastLogin=stablePattern
+if(ok && bits!==last){
+login(bits)
+last=bits
+}
 }
 
-}
+setInterval(scan,100)
 
-/* run auto */
-setInterval(scan,300)
-
-/* ===== LOGIN ===== */
+/* LOGIN */
 
 function login(p){
 
@@ -216,136 +187,27 @@ let tx=db.transaction("accounts","readonly")
 let store=tx.objectStore("accounts")
 
 store.openCursor().onsuccess=e=>{
-let cursor=e.target.result
-
-if(cursor){
-
-let acc=cursor.value
-
-if(acc.pattern===p && acc.password===pass){
-
-current=acc
-document.getElementById("account").classList.remove("hidden")
-showCard()
-}
-
-cursor.continue()
-}
-}
-}
-
-/* ===== UI ===== */
-
-function showCard(){
-document.getElementById("card").innerHTML=`
-Name: ${current.name}<br>
-Job: ${current.job}<br>
-Balance: ${current.unlimited ? "Unlimited" : current.balance}<br>
-Card: ${current.card}
-`
-}
-
-function showTx(){
-document.getElementById("tx").classList.remove("hidden")
-}
-
-function showPin(){
-document.getElementById("pinbox").classList.remove("hidden")
-}
-
-function showAll(){
-
-let div=document.getElementById("allaccounts")
-div.classList.remove("hidden")
-div.innerHTML="<h3>All Accounts</h3>"
-
-let tx=db.transaction("accounts","readonly")
-let store=tx.objectStore("accounts")
-
-store.openCursor().onsuccess=e=>{
 let c=e.target.result
 
 if(c){
+
 let a=c.value
 
-div.innerHTML+=`
-<div class="card">
+if(a.pattern===p && a.password===pass){
+
+current=a
+document.getElementById("account").classList.remove("hidden")
+
+document.getElementById("card").innerHTML=`
 Name: ${a.name}<br>
-Card: ${a.card}<br>
-PIN: ${a.password}<br>
-Pattern: ${a.pattern}<br>
-Balance: ${a.unlimited ? "Unlimited" : a.balance}
-</div>
+Job: ${a.job}<br>
+Balance: ${a.unlimited?"Unlimited":a.balance}
 `
+}
 
 c.continue()
 }
 }
-}
-
-/* ===== TRANSACTION ===== */
-
-function send(){
-
-let rec=document.getElementById("receiver").value
-let amt=parseInt(document.getElementById("amount").value)
-
-let tx=db.transaction("accounts","readwrite")
-let store=tx.objectStore("accounts")
-
-let s=store.get(current.card)
-let r=store.get(rec)
-
-s.onsuccess=()=>{
-
-let sender=s.result
-
-if(!sender.unlimited && sender.balance<amt){
-alert("Not enough balance")
-return
-}
-
-r.onsuccess=()=>{
-
-let receiver=r.result
-if(!receiver){alert("Receiver not found");return}
-
-if(!sender.unlimited){
-sender.balance-=amt
-}
-
-receiver.balance+=amt
-
-store.put(sender)
-store.put(receiver)
-
-current=sender
-showCard()
-
-alert("Transaction Success")
-}
-}
-}
-
-/* ===== PIN CHANGE ===== */
-
-function changePin(){
-
-let oldp=document.getElementById("oldpin").value
-let newp=document.getElementById("newpin").value
-
-if(oldp!==current.password){
-alert("Wrong old PIN")
-return
-}
-
-let tx=db.transaction("accounts","readwrite")
-let store=tx.objectStore("accounts")
-
-current.password=newp
-store.put(current)
-
-alert("PIN Updated")
 }
 
 </script>
