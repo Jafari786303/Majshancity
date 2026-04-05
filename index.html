@@ -1,96 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure Bank</title>
-
-<style>
-body{
- font-family:Arial;
- background:#0f172a;
- color:white;
- text-align:center;
- margin:0;
-}
-
-.container{
- padding:15px;
-}
-
-.card{
- background:#1e293b;
- padding:15px;
- margin:10px;
- border-radius:10px;
-}
-
-button{
- padding:10px 15px;
- margin:5px;
- border:none;
- border-radius:8px;
- background:#3b82f6;
- color:white;
- font-size:16px;
-}
-
-input{
- padding:10px;
- margin:5px;
- border-radius:8px;
- border:none;
- width:80%;
-}
-
-video{
- width:90%;
- border-radius:10px;
- margin-top:10px;
-}
-</style>
-
-</head>
-
-<body>
-
-<div class="container">
-
-<h2>Secure Banking System</h2>
-
-<!-- CAMERA -->
-<video id="video" autoplay playsinline></video>
-<canvas id="canvas" style="display:none;"></canvas>
-
-<br>
-<button onclick="startCam()">Start Camera</button>
-<button onclick="scan()">Scan</button>
-
-<p id="patternText">Pattern: </p>
-
-<!-- LOGIN -->
-<div class="card">
-<h3>Login</h3>
-<input type="password" id="patternInput" placeholder="Enter Pattern">
-<br>
-<button onclick="manualLogin()">Login</button>
-</div>
-
-<!-- ADMIN -->
-<div class="card">
-<h3>Admin</h3>
-<input type="password" id="adminPass" placeholder="Admin Password">
-<br>
-<button onclick="adminLogin()">Open Admin</button>
-<pre id="adminPanel"></pre>
-</div>
-
-</div>
-
 <script>
 
 let video=document.getElementById("video")
 let history=[]
 let last=""
+let scanning=false
 
 // USERS
 let users=[
@@ -99,23 +12,37 @@ let users=[
 {name:"Hussain",pattern:"00110011",balance:12000}
 ]
 
-// ADMIN PASSWORD
+// ADMIN
 let adminPassword="mjgogog786"
 
-// CAMERA START
+// START CAMERA
 function startCam(){
  navigator.mediaDevices.getUserMedia({
   video:{ facingMode:"environment" }
  })
  .then(stream=>{
   video.srcObject=stream
+  startScanning()
  })
- .catch(()=>{
-  alert("Camera not allowed")
- })
+ .catch(()=>alert("Camera not allowed"))
 }
 
-// SCANNER (STABLE VERSION)
+// AUTO SCANNING LOOP
+function startScanning(){
+ scanning=true
+
+ function loop(){
+  if(!scanning) return
+
+  scan()
+
+  requestAnimationFrame(loop)
+ }
+
+ loop()
+}
+
+// SCAN FUNCTION
 function scan(){
  if(video.videoWidth===0) return
 
@@ -138,8 +65,8 @@ function scan(){
   let blue=0
   let red=0
 
-  for(let dx=-5;dx<=5;dx++){
-   for(let dy=-5;dy<=5;dy++){
+  for(let dx=-4;dx<=4;dx++){
+   for(let dy=-4;dy<=4;dy++){
 
     let d=ctx.getImageData(x+dx,y+dy,1,1).data
     let r=d[0],g=d[1],b=d[2]
@@ -159,11 +86,16 @@ function scan(){
  }
 
  history.push(bits)
- if(history.length>3) history.shift()
+ if(history.length>5) history.shift()
 
+ // show live pattern
  document.getElementById("patternText").innerText="Pattern: "+bits
 
- if(history.every(v=>v===bits) && bits!==last){
+ // check stability
+ let stable = history.length===5 && history.every(v=>v===bits)
+
+ // LOGIN IF MATCH
+ if(stable && bits!==last){
   login(bits)
   last=bits
  }
@@ -178,12 +110,6 @@ function login(p){
  }else{
   alert("Access Denied")
  }
-}
-
-// MANUAL LOGIN
-function manualLogin(){
- let p=document.getElementById("patternInput").value
- login(p)
 }
 
 // ADMIN
@@ -204,6 +130,3 @@ function adminLogin(){
 }
 
 </script>
-
-</body>
-</html>
