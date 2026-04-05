@@ -1,178 +1,144 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure Banking System</title>
+<meta charset="UTF-8">
+<title>Secure Scanner App</title>
 
 <style>
-body{
- margin:0;
- font-family:Arial;
- background:#0f172a;
- color:white;
- text-align:center;
+body { font-family: Arial; text-align:center; background:#111; color:white; }
+
+video {
+ width:300px;
+ border:3px solid #0f0;
+ border-radius:10px;
 }
 
-.container{ padding:15px; }
-
-video{
+.guide-line {
+ position:absolute;
+ top:50%;
+ left:5%;
  width:90%;
- border-radius:10px;
- margin-top:10px;
- background:black;
+ height:3px;
+ background:red;
+ box-shadow:0 0 10px red;
 }
 
-canvas{ display:none; }
+.hidden { display:none; }
 
-.card{
- background:#1e293b;
- padding:15px;
- margin:10px;
- border-radius:10px;
-}
-
-input{
- padding:8px;
+button {
  margin:5px;
- width:80%;
- border-radius:6px;
- border:none;
-}
-
-button{
  padding:10px;
- margin:5px;
- border:none;
- border-radius:8px;
- background:#3b82f6;
- color:white;
 }
 
-.hidden{ display:none; }
+input {
+ margin:5px;
+ padding:8px;
+ width:200px;
+}
 
-table{
- width:100%;
+table {
+ margin:auto;
  border-collapse:collapse;
 }
 
-td,th{
- border:1px solid #444;
+td, th {
+ border:1px solid white;
  padding:5px;
- font-size:12px;
 }
 </style>
+
 </head>
 
 <body>
 
-<div class="container">
+<h2>Secure Scanner</h2>
 
-<h2>Secure Banking System</h2>
-
-<button onclick="startCam()">Start Camera</button>
-<button onclick="openAdmin()">Admin Panel</button>
-
-<br>
-
-<video id="video" autoplay playsinline></video>
-<canvas id="canvas"></canvas>
-
-<p id="status">Scanning...</p>
-
-<!-- PIN -->
-<div id="pinBox" class="card hidden">
-<h3>Enter PIN</h3>
-<input type="password" id="pinInput">
-<br>
-<button onclick="verifyPin()">Confirm</button>
+<div id="loginBox">
+ <input id="loginName" placeholder="Enter Name"><br>
+ <button onclick="login()">Login</button>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="card hidden">
-<h3 id="userName"></h3>
-<p id="userInfo"></p>
-<button onclick="logout()">Logout</button>
+<div id="pinBox" class="hidden">
+ <h3>Enter PIN</h3>
+ <input id="pinInput" type="password">
+ <button onclick="checkPin()">Submit</button>
 </div>
 
-<!-- ADMIN LOGIN -->
-<div id="adminLogin" class="card hidden">
-<h3>Admin Login</h3>
-<input type="password" id="adminPass" placeholder="Enter Password">
-<br>
-<button onclick="checkAdmin()">Login</button>
+<div id="scannerBox" class="hidden" style="position:relative; display:inline-block;">
+ <video id="video" autoplay playsinline></video>
+ <div class="guide-line"></div>
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="adminPanel" class="card hidden">
-<h3>Admin Panel</h3>
+<canvas id="canvas" class="hidden"></canvas>
 
-<input id="name" placeholder="Name">
-<input id="job" placeholder="Job">
-<input id="cnic" placeholder="CNIC">
-<input id="card" placeholder="Card No">
-<input id="pattern" placeholder="Pattern">
-<input id="pin" placeholder="PIN">
-<input id="balance" placeholder="Balance">
-
-<br>
-<button onclick="saveUser()">Save User</button>
-
-<h3>All Accounts</h3>
-<table id="table"></table>
-
-<br>
-<button onclick="closeAdmin()">Close</button>
+<div id="userPanel" class="hidden">
+ <h3>User Details</h3>
+ <p id="details"></p>
+ <button onclick="logout()">Logout</button>
 </div>
 
+<div id="adminPanel" class="hidden">
+ <h3>Admin Panel</h3>
+
+ <input id="name" placeholder="Name"><br>
+ <input id="job" placeholder="Job"><br>
+ <input id="cnic" placeholder="CNIC"><br>
+ <input id="card" placeholder="Card"><br>
+ <input id="national" placeholder="National No"><br>
+ <input id="pattern" placeholder="Pattern"><br>
+ <input id="pin" placeholder="PIN"><br>
+ <input id="balance" placeholder="Balance"><br>
+
+ <button onclick="saveUser()">Save</button>
+
+ <h4>Accounts</h4>
+ <table id="table"></table>
+
+ <button onclick="logout()">Logout</button>
 </div>
 
 <script>
 
-let video=document.getElementById("video");
-let stream=null;
-let scanning=false;
-let currentUser=null;
+let users = JSON.parse(localStorage.getItem("users") || "[]");
 
-let users=JSON.parse(localStorage.getItem("users")) || [];
+let video = document.getElementById("video");
+let stream;
+let scanning = false;
+let currentUser = null;
+let lastPatterns = [];
+let editingIndex = -1;
 
-/* ---------------- CAMERA ---------------- */
+function login(){
+ let name = loginName.value;
+ currentUser = users.find(u=>u.name===name);
+
+ if(!currentUser){
+  alert("User not found");
+  return;
+ }
+
+ startCam();
+}
 
 function startCam(){
+ navigator.mediaDevices.getUserMedia({video:true})
+ .then(s=>{
+  stream = s;
+  video.srcObject = stream;
+  scanning = true;
+  scanLoop();
+ });
+}
 
- // stop old camera
+function stopCam(){
  if(stream){
   stream.getTracks().forEach(t=>t.stop());
  }
-
- navigator.mediaDevices.getUserMedia({
-  video:{facingMode:"environment"}
- })
- .then(s=>{
-  stream=s;
-  video.srcObject=stream;
-
-  scanning=true;
-  scanLoop();
- })
- .catch(()=>alert("Camera error"));
+ scanning = false;
 }
-
-/* ---------------- SCAN LOOP ---------------- */
 
 function scanLoop(){
-
- function loop(){
-  if(scanning) scan();
-  requestAnimationFrame(loop);
- }
- loop();
-}
-
-/* ---------------- PATTERN MATCH ---------------- */
-
-function scan(){
-
- if(video.videoWidth===0) return;
+ if(!scanning) return;
 
  let canvas=document.getElementById("canvas");
  let ctx=canvas.getContext("2d");
@@ -190,152 +156,127 @@ function scan(){
  for(let i=0;i<8;i++){
   let d=ctx.getImageData(i*step,y,1,1).data;
   let r=d[0], g=d[1], b=d[2];
-
   pattern += (r>g && r>b) ? "1" : "0";
  }
 
- document.getElementById("status").innerText=pattern;
+ lastPatterns.push(pattern);
+ if(lastPatterns.length>5) lastPatterns.shift();
 
- let match=users.find(u=>u.pattern===pattern);
+ let stable = lastPatterns.every(p=>p===pattern);
 
- if(match){
+ if(stable){
+  let match = users.find(u=>u.pattern===pattern);
 
-  scanning=false;
-
-  currentUser=match;
-
-  stopCam();
-
-  document.getElementById("pinBox").classList.remove("hidden");
- }
-}
-
-/* ---------------- STOP CAMERA ---------------- */
-
-function stopCam(){
-
- if(stream){
-  stream.getTracks().forEach(t=>t.stop());
-  stream=null;
+  if(match){
+   currentUser = match;
+   stopCam();
+   pinBox.classList.remove("hidden");
+  }
  }
 
- video.srcObject=null;
+ requestAnimationFrame(scanLoop);
 }
 
-/* ---------------- PIN CHECK ---------------- */
+function checkPin(){
+ let pin = pinInput.value;
 
-function verifyPin(){
+ if(currentUser && pin == currentUser.pin){
+  pinBox.classList.add("hidden");
 
- let pin=document.getElementById("pinInput").value;
-
- if(currentUser && pin===currentUser.pin){
-
-  document.getElementById("pinBox").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-
-  document.getElementById("userName").innerText=currentUser.name;
-
-  document.getElementById("userInfo").innerHTML=`
-   Job: ${currentUser.job}<br>
-   CNIC: ${currentUser.cnic}<br>
-   Card: ${currentUser.card}<br>
-   Balance: ${currentUser.balance}
-  `;
-
- }else{
+  if(currentUser.name === "admin"){
+   showAdmin();
+  } else {
+   showUser();
+  }
+ } else {
   alert("Wrong PIN");
-
-  currentUser=null;
-  startCam(); // restart scanning
  }
 }
 
-/* ---------------- LOGOUT ---------------- */
+function showUser(){
+ userPanel.classList.remove("hidden");
 
-function logout(){
- currentUser=null;
- document.getElementById("dashboard").classList.add("hidden");
- startCam();
+ details.innerHTML = `
+ Name: ${currentUser.name}<br>
+ Job: ${currentUser.job}<br>
+ CNIC: ${currentUser.cnic}<br>
+ Card: ${currentUser.card}<br>
+ National: ${currentUser.national}<br>
+ Balance: ${currentUser.balance}
+ `;
 }
 
-/* ---------------- ADMIN ---------------- */
-
-function openAdmin(){
- document.getElementById("adminLogin").classList.remove("hidden");
-}
-
-function closeAdmin(){
- document.getElementById("adminPanel").classList.add("hidden");
-}
-
-/* ADMIN LOGIN */
-
-function checkAdmin(){
-
- let pass=document.getElementById("adminPass").value;
-
- if(pass==="303786"){
-
-  document.getElementById("adminLogin").classList.add("hidden");
-  document.getElementById("adminPanel").classList.remove("hidden");
-
-  showTable();
-
- }else alert("Wrong Password");
-}
-
-/* SAVE USER */
-
-function saveUser(){
-
- let u={
-  name:name.value,
-  job:job.value,
-  cnic:cnic.value,
-  card:card.value,
-  pattern:pattern.value,
-  pin:pin.value,
-  balance:balance.value
- };
-
- let exist=users.find(x=>x.name===u.name);
-
- if(exist) Object.assign(exist,u);
- else users.push(u);
-
- localStorage.setItem("users",JSON.stringify(users));
-
+function showAdmin(){
+ adminPanel.classList.remove("hidden");
  showTable();
- alert("Saved");
 }
-
-/* SHOW ACCOUNTS */
 
 function showTable(){
-
  let t=document.getElementById("table");
 
- t.innerHTML=`
+ t.innerHTML = `
  <tr>
-  <th>Name</th>
-  <th>Job</th>
-  <th>CNIC</th>
-  <th>Card</th>
-  <th>Balance</th>
-  <th>PIN</th>
- </tr>`;
+  <th>Name</th><th>Job</th><th>CNIC</th>
+  <th>Card</th><th>National</th><th>PIN</th><th>Action</th>
+ </tr>
+ `;
 
- users.forEach(u=>{
-  t.innerHTML+=`
+ users.forEach((u,i)=>{
+  t.innerHTML += `
   <tr>
    <td>${u.name}</td>
    <td>${u.job}</td>
    <td>${u.cnic}</td>
    <td>${u.card}</td>
-   <td>${u.balance}</td>
+   <td>${u.national}</td>
    <td>${u.pin}</td>
-  </tr>`;
+   <td><button onclick="editUser(${i})">Edit</button></td>
+  </tr>
+  `;
  });
+}
+
+function saveUser(){
+ let u = {
+  name:name.value,
+  job:job.value,
+  cnic:cnic.value,
+  card:card.value,
+  national:national.value,
+  pattern:pattern.value,
+  pin:pin.value,
+  balance:balance.value
+ };
+
+ if(editingIndex >= 0){
+  users[editingIndex] = u;
+  editingIndex = -1;
+ } else {
+  users.push(u);
+ }
+
+ localStorage.setItem("users", JSON.stringify(users));
+ showTable();
+ alert("Saved");
+}
+
+function editUser(i){
+ let u = users[i];
+
+ name.value = u.name;
+ job.value = u.job;
+ cnic.value = u.cnic;
+ card.value = u.card;
+ national.value = u.national;
+ pattern.value = u.pattern;
+ pin.value = u.pin;
+ balance.value = u.balance;
+
+ editingIndex = i;
+}
+
+function logout(){
+ location.reload();
 }
 
 </script>
