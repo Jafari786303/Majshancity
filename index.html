@@ -42,6 +42,25 @@ button{
 .btn{background:#22c55e;color:white}
 .btn-danger{background:#ef4444}
 .hidden{display:none}
+
+.overlay{
+ position:absolute;
+ top:0;left:0;right:0;bottom:0;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ padding:0 5%;
+ pointer-events:none;
+}
+
+.box{
+ width:7vw;
+ height:7vw;
+ max-width:40px;
+ max-height:40px;
+ border:2px solid yellow;
+ border-radius:50%;
+}
 </style>
 </head>
 
@@ -51,7 +70,10 @@ button{
 
 <div class="container" id="mainUI">
 
+<div style="position:relative">
 <video id="video" autoplay playsinline style="width:100%;border-radius:12px;"></video>
+<div class="overlay" id="overlay"></div>
+</div>
 
 <div id="livebits">Pattern: --------</div>
 
@@ -74,6 +96,14 @@ button{
 <canvas id="canvas" class="hidden"></canvas>
 
 <script>
+
+/* OVERLAY */
+let overlay=document.getElementById("overlay")
+for(let i=0;i<8;i++){
+ let b=document.createElement("div")
+ b.className="box"
+ overlay.appendChild(b)
+}
 
 /* CAMERA */
 let video=document.getElementById("video")
@@ -102,7 +132,7 @@ function stopCamera(){
 
 /* DATABASE */
 let db
-let req=indexedDB.open("ShapeBankDB",4)
+let req=indexedDB.open("ShapeBankDB",6)
 
 req.onupgradeneeded=e=>{
  db=e.target.result
@@ -114,44 +144,11 @@ req.onupgradeneeded=e=>{
   s=e.target.transaction.objectStore("accounts")
  }
 
- /* USERS */
+ s.put({name:"Bank Minister",job:"Minister",balance:999999999,card:"9999",password:"9999",pattern:"11111111",unlimited:true})
 
- s.put({
-  name:"Bank Minister",
-  job:"Minister",
-  balance:999999999,
-  card:"9999",
-  password:"9999",
-  pattern:"11111111",
-  unlimited:true
- })
-
- s.put({
-  name:"Muhammad",
-  job:"Student",
-  balance:5000,
-  card:"7777",
-  password:"1234",
-  pattern:"10100101"
- })
-
- s.put({
-  name:"Hassan",
-  job:"Doctor",
-  balance:12000,
-  card:"2222",
-  password:"2222",
-  pattern:"11001100"
- })
-
- s.put({
-  name:"Hussain",
-  job:"Designer",
-  balance:8000,
-  card:"3333",
-  password:"3333",
-  pattern:"00110011"
- })
+ s.put({name:"Muhammad",job:"Student",balance:5000,card:"7777",password:"1234",pattern:"10100101"})
+ s.put({name:"Hassan",job:"Doctor",balance:12000,card:"2222",password:"2222",pattern:"11001100"})
+ s.put({name:"Hussain",job:"Designer",balance:8000,card:"3333",password:"3333",pattern:"00110011"})
 }
 
 req.onsuccess=e=>db=e.target.result
@@ -160,7 +157,7 @@ let current=null
 let history=[]
 let last=""
 
-/* SCANNER */
+/* SCANNER (SHAPE + COLOR) */
 function scan(){
  if(video.videoWidth===0) return
 
@@ -179,19 +176,22 @@ function scan(){
  for(let i=0;i<8;i++){
   let x=i*step+step/2
 
-  let r=0,g=0,b=0,count=0
+  let red=0, blue=0, total=0
 
-  for(let dx=-4;dx<=4;dx++){
-   for(let dy=-4;dy<=4;dy++){
+  for(let dx=-8;dx<=8;dx++){
+   for(let dy=-8;dy<=8;dy++){
     let d=ctx.getImageData(x+dx,y+dy,1,1).data
-    r+=d[0]; g+=d[1]; b+=d[2]; count++
+    let r=d[0], g=d[1], b=d[2]
+
+    if(r>150 && r>g+40 && r>b+40) red++
+    if(b>150 && b>r+40 && b>g+40) blue++
+
+    total++
    }
   }
 
-  r/=count; g/=count; b/=count
-
-  if(b > r+20 && b > g+20) bits+="1"
-  else if(r > g+20 && r > b+20) bits+="0"
+  if(blue > red && blue > total*0.15) bits+="1"
+  else if(red > blue && red > total*0.15) bits+="0"
   else bits+="-"
  }
 
@@ -232,7 +232,7 @@ function login(p){
  }
 }
 
-/* SUCCESS UI */
+/* SUCCESS */
 function openAccount(){
  navigator.vibrate(200)
  stopCamera()
@@ -252,7 +252,7 @@ function updateCard(){
  `
 }
 
-/* ADMIN PANEL */
+/* ADMIN */
 function adminAccess(){
  let pass=prompt("Enter Admin Password")
 
