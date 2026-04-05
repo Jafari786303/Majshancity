@@ -1,19 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Bank</title>
+
+<style>
+body{
+ margin:0;
+ font-family:Arial;
+ background:#0f172a;
+ color:white;
+ text-align:center;
+}
+
+.container{
+ padding:15px;
+}
+
+video{
+ width:90%;
+ border-radius:10px;
+ margin-top:10px;
+ background:black;
+}
+
+button{
+ padding:10px 15px;
+ margin:5px;
+ border:none;
+ border-radius:8px;
+ background:#3b82f6;
+ color:white;
+}
+
+.card{
+ background:#1e293b;
+ padding:15px;
+ margin:10px;
+ border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Secure Banking System</h2>
+
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<br>
+
+<button onclick="startCam()">Start Camera</button>
+
+<p id="patternText">Pattern: ---</p>
+
+<div class="card">
+<h3>Admin</h3>
+<input type="password" id="adminPass" placeholder="Admin Password">
+<br>
+<button onclick="adminLogin()">Login Admin</button>
+<pre id="adminPanel"></pre>
+</div>
+
+</div>
+
 <script>
 
-let video=document.getElementById("video")
-let history=[]
-let last=""
-let scanning=false
+let video;
+let history=[];
+let last="";
 
 // USERS
 let users=[
 {name:"Muhammad",pattern:"10100101",balance:5000},
 {name:"Hassan",pattern:"11001100",balance:8000},
 {name:"Hussain",pattern:"00110011",balance:12000}
-]
+];
 
-// ADMIN
-let adminPassword="mjgogog786"
+// ADMIN PASSWORD
+let adminPassword="mjgogog786";
+
+// WAIT UNTIL PAGE LOADS
+window.onload=function(){
+ video=document.getElementById("video");
+};
 
 // START CAMERA
 function startCam(){
@@ -21,112 +94,104 @@ function startCam(){
   video:{ facingMode:"environment" }
  })
  .then(stream=>{
-  video.srcObject=stream
-  startScanning()
+  video.srcObject=stream;
+  startScanning();
  })
- .catch(()=>alert("Camera not allowed"))
+ .catch(err=>{
+  alert("Camera not allowed or not supported");
+  console.log(err);
+ });
 }
 
-// AUTO SCANNING LOOP
+// AUTO SCANNING
 function startScanning(){
- scanning=true
-
  function loop(){
-  if(!scanning) return
-
-  scan()
-
-  requestAnimationFrame(loop)
+  scan();
+  requestAnimationFrame(loop);
  }
-
- loop()
+ loop();
 }
 
 // SCAN FUNCTION
 function scan(){
- if(video.videoWidth===0) return
+ if(!video || video.videoWidth===0) return;
 
- let canvas=document.getElementById("canvas")
- let ctx=canvas.getContext("2d")
+ let canvas=document.getElementById("canvas");
+ let ctx=canvas.getContext("2d");
 
- canvas.width=video.videoWidth
- canvas.height=video.videoHeight
+ canvas.width=video.videoWidth;
+ canvas.height=video.videoHeight;
 
- ctx.drawImage(video,0,0)
+ ctx.drawImage(video,0,0);
 
- let y=canvas.height/2
- let step=canvas.width/8
+ let y=canvas.height/2;
+ let step=canvas.width/8;
 
- let bits=""
+ let bits="";
 
  for(let i=0;i<8;i++){
-  let x=i*step+step/2
+  let x=i*step+step/2;
 
-  let blue=0
-  let red=0
+  let blue=0;
+  let red=0;
 
   for(let dx=-4;dx<=4;dx++){
    for(let dy=-4;dy<=4;dy++){
 
-    let d=ctx.getImageData(x+dx,y+dy,1,1).data
-    let r=d[0],g=d[1],b=d[2]
+    let d=ctx.getImageData(x+dx,y+dy,1,1).data;
+    let r=d[0], g=d[1], b=d[2];
 
-    if(r>150 && r>g+30 && r>b+30){
-     red++
-    }
-
-    if(b>130 && b>r+20){
-     blue++
-    }
+    if(r>150 && r>g+30 && r>b+30) red++;
+    if(b>130 && b>r+20) blue++;
 
    }
   }
 
-  bits += blue > red ? "1" : "0"
+  bits += (blue > red) ? "1" : "0";
  }
 
- history.push(bits)
- if(history.length>5) history.shift()
+ history.push(bits);
+ if(history.length>5) history.shift();
 
- // show live pattern
- document.getElementById("patternText").innerText="Pattern: "+bits
+ document.getElementById("patternText").innerText="Pattern: "+bits;
 
- // check stability
- let stable = history.length===5 && history.every(v=>v===bits)
+ let stable = history.length===5 && history.every(v=>v===bits);
 
- // LOGIN IF MATCH
- if(stable && bits!==last){
-  login(bits)
-  last=bits
+ if(stable && bits!==last && !bits.includes("-")){
+  login(bits);
+  last=bits;
  }
 }
 
 // LOGIN
 function login(p){
- let user=users.find(u=>u.pattern===p)
+ let user=users.find(u=>u.pattern===p);
 
  if(user){
-  alert("Welcome "+user.name)
+  alert("Welcome "+user.name);
  }else{
-  alert("Access Denied")
+  alert("Access Denied");
  }
 }
 
 // ADMIN
 function adminLogin(){
- let pass=document.getElementById("adminPass").value
+ let pass=document.getElementById("adminPass").value;
 
  if(pass===adminPassword){
-  let txt="ADMIN PANEL\n\n"
+  let txt="ADMIN PANEL\n\n";
 
   users.forEach(u=>{
-   txt+=`Name: ${u.name}\nPattern: ${u.pattern}\nBalance: ${u.balance}\n\n`
-  })
+   txt+=`Name: ${u.name}\nPattern: ${u.pattern}\nBalance: ${u.balance}\n\n`;
+  });
 
-  document.getElementById("adminPanel").innerText=txt
+  document.getElementById("adminPanel").innerText=txt;
  }else{
-  alert("Wrong password")
+  alert("Wrong password");
  }
 }
 
 </script>
+
+</body>
+</html>
