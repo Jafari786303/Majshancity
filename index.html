@@ -5,25 +5,25 @@
 <title>Secure Scanner</title>
 
 <style>
-body {
- font-family: Arial;
- text-align:center;
+body{
  background:#111;
  color:white;
+ text-align:center;
+ font-family:Arial;
 }
 
-video {
+video{
  width:300px;
  border:3px solid #0f0;
  border-radius:10px;
 }
 
-.container {
+.container{
  position:relative;
  display:inline-block;
 }
 
-.guide-line {
+.guide-line{
  position:absolute;
  top:50%;
  left:5%;
@@ -33,25 +33,25 @@ video {
  box-shadow:0 0 10px red;
 }
 
-.hidden { display:none; }
+.hidden{display:none;}
 
-button {
+button{
  padding:8px;
  margin:5px;
 }
 
-input {
+input{
  padding:8px;
  margin:5px;
  width:200px;
 }
 
-table {
+table{
  margin:auto;
  border-collapse:collapse;
 }
 
-td, th {
+td,th{
  border:1px solid white;
  padding:5px;
 }
@@ -61,7 +61,7 @@ td, th {
 
 <body>
 
-<h2>Secure Scanner App</h2>
+<h2>Secure Scanner</h2>
 
 <div id="loginBox">
  <input id="loginName" placeholder="Enter Name"><br>
@@ -81,6 +81,8 @@ td, th {
  </div>
 </div>
 
+<p id="status">Waiting...</p>
+
 <canvas id="canvas" class="hidden"></canvas>
 
 <div id="userPanel" class="hidden">
@@ -96,14 +98,14 @@ td, th {
  <input id="job" placeholder="Job"><br>
  <input id="cnic" placeholder="CNIC"><br>
  <input id="card" placeholder="Card"><br>
- <input id="national" placeholder="National No"><br>
+ <input id="national" placeholder="National"><br>
  <input id="pattern" placeholder="Pattern"><br>
  <input id="pin" placeholder="PIN"><br>
  <input id="balance" placeholder="Balance"><br>
 
  <button onclick="saveUser()">Save</button>
 
- <h4>All Accounts</h4>
+ <h4>Accounts</h4>
  <table id="table"></table>
 
  <button onclick="logout()">Logout</button>
@@ -114,47 +116,48 @@ td, th {
 let users = JSON.parse(localStorage.getItem("users") || "[]");
 
 let video = document.getElementById("video");
-let stream = null;
-let scanning = false;
-let currentUser = null;
-let lastPatterns = [];
-let editingIndex = -1;
+let stream;
+let scanning=false;
+let currentUser=null;
+let lastPatterns=[];
+let editingIndex=-1;
 
 // LOGIN
 function login(){
  let name = loginName.value;
- currentUser = users.find(u=>u.name === name);
+
+ currentUser = users.find(u=>u.name===name);
 
  if(!currentUser){
   alert("User not found");
   return;
  }
 
- startCamera();
+ startCam();
 }
 
-// CAMERA (BACK CAMERA FIX)
-function startCamera(){
+// CAMERA FIX (BACK CAMERA)
+function startCam(){
  navigator.mediaDevices.getUserMedia({
-  video: { facingMode: { ideal: "environment" } }
+  video:{ facingMode:{ideal:"environment"} }
  })
  .then(s=>{
-  stream = s;
-  video.srcObject = stream;
+  stream=s;
+  video.srcObject=s;
   scannerBox.classList.remove("hidden");
-  scanning = true;
+  scanning=true;
   scanLoop();
  });
 }
 
-function stopCamera(){
+function stopCam(){
  if(stream){
   stream.getTracks().forEach(t=>t.stop());
  }
- scanning = false;
+ scanning=false;
 }
 
-// SCANNING (IMPROVED)
+// SCAN LOOP
 function scanLoop(){
  if(!scanning) return;
 
@@ -173,24 +176,37 @@ function scanLoop(){
 
  for(let i=0;i<8;i++){
   let d=ctx.getImageData(i*step,y,1,1).data;
-  let r=d[0], g=d[1], b=d[2];
+  let r=d[0],g=d[1],b=d[2];
 
-  // Better detection (brightness)
-  let brightness = (r+g+b)/3;
-  pattern += brightness > 120 ? "1" : "0";
+  let brightness=(r+g+b)/3;
+
+  pattern += brightness > 130 ? "1" : "0";
  }
 
+ // SHOW PATTERN
+ status.innerText="Pattern: "+pattern;
+
+ // STABILITY CHECK
  lastPatterns.push(pattern);
- if(lastPatterns.length > 5) lastPatterns.shift();
+ if(lastPatterns.length>5) lastPatterns.shift();
 
  let stable = lastPatterns.every(p=>p===pattern);
 
  if(stable){
-  let match = users.find(u=>u.pattern === pattern);
+
+  let match = users.find(u=>{
+   let diff=0;
+
+   for(let i=0;i<u.pattern.length;i++){
+    if(u.pattern[i]!==pattern[i]) diff++;
+   }
+
+   return diff<=2;
+  });
 
   if(match){
-   stopCamera();
-   currentUser = match;
+   stopCam();
+   currentUser=match;
    pinBox.classList.remove("hidden");
   }
  }
@@ -200,19 +216,15 @@ function scanLoop(){
 
 // PIN CHECK
 function checkPin(){
- let pin = pinInput.value;
-
- if(currentUser && pin == currentUser.pin){
-
+ if(currentUser && pinInput.value==currentUser.pin){
   pinBox.classList.add("hidden");
 
-  if(currentUser.name === "admin"){
+  if(currentUser.name==="admin"){
    showAdmin();
-  } else {
+  }else{
    showUser();
   }
-
- } else {
+ }else{
   alert("Wrong PIN");
  }
 }
@@ -221,7 +233,7 @@ function checkPin(){
 function showUser(){
  userPanel.classList.remove("hidden");
 
- details.innerHTML = `
+ details.innerHTML=`
  Name: ${currentUser.name}<br>
  Job: ${currentUser.job}<br>
  CNIC: ${currentUser.cnic}<br>
@@ -237,11 +249,11 @@ function showAdmin(){
  showTable();
 }
 
-// SHOW TABLE
+// TABLE
 function showTable(){
  let t=document.getElementById("table");
 
- t.innerHTML = `
+ t.innerHTML=`
  <tr>
   <th>Name</th>
   <th>Job</th>
@@ -254,7 +266,7 @@ function showTable(){
  `;
 
  users.forEach((u,i)=>{
-  t.innerHTML += `
+  t.innerHTML+=`
   <tr>
    <td>${u.name}</td>
    <td>${u.job}</td>
@@ -270,7 +282,8 @@ function showTable(){
 
 // SAVE USER
 function saveUser(){
- let u = {
+
+ let u={
   name:name.value,
   job:job.value,
   cnic:cnic.value,
@@ -281,32 +294,32 @@ function saveUser(){
   balance:balance.value
  };
 
- if(editingIndex >= 0){
-  users[editingIndex] = u;
-  editingIndex = -1;
- } else {
+ if(editingIndex>=0){
+  users[editingIndex]=u;
+  editingIndex=-1;
+ }else{
   users.push(u);
  }
 
- localStorage.setItem("users", JSON.stringify(users));
+ localStorage.setItem("users",JSON.stringify(users));
  showTable();
  alert("Saved");
 }
 
-// EDIT USER
+// EDIT
 function editUser(i){
- let u = users[i];
+ let u=users[i];
 
- name.value = u.name;
- job.value = u.job;
- cnic.value = u.cnic;
- card.value = u.card;
- national.value = u.national;
- pattern.value = u.pattern;
- pin.value = u.pin;
- balance.value = u.balance;
+ name.value=u.name;
+ job.value=u.job;
+ cnic.value=u.cnic;
+ card.value=u.card;
+ national.value=u.national;
+ pattern.value=u.pattern;
+ pin.value=u.pin;
+ balance.value=u.balance;
 
- editingIndex = i;
+ editingIndex=i;
 }
 
 // LOGOUT
