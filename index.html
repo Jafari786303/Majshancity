@@ -1,306 +1,200 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Secure App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Bank</title>
 
 <style>
-body{
- background:#111;
- color:white;
- text-align:center;
- font-family:Arial;
-}
 
-video{
- width:300px;
- border:3px solid #0f0;
- border-radius:10px;
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+text-align:center;
 }
 
 .container{
- position:relative;
- display:inline-block;
+margin-top:40px;
 }
 
-.guide-line{
- position:absolute;
- top:50%;
- left:5%;
- width:90%;
- height:3px;
- background:red;
+input{
+padding:10px;
+margin:10px;
+width:220px;
+border-radius:8px;
+border:none;
 }
 
-.hidden{display:none;}
-
-input, button{
- padding:8px;
- margin:5px;
+button{
+padding:10px 20px;
+border:none;
+border-radius:8px;
+background:#2563eb;
+color:white;
+font-size:16px;
 }
 
-table{
- margin:auto;
- border-collapse:collapse;
+video{
+width:90%;
+max-width:400px;
+border-radius:10px;
+margin-top:20px;
 }
 
-td,th{
- border:1px solid white;
- padding:5px;
+.scanline{
+position:absolute;
+width:80%;
+height:3px;
+background:red;
+animation:scan 2s infinite;
 }
+
+@keyframes scan{
+0%{top:0}
+100%{top:100%}
+}
+
+.cameraBox{
+position:relative;
+display:inline-block;
+}
+
+.circle{
+width:20px;
+height:20px;
+border-radius:50%;
+background:blue;
+display:inline-block;
+margin:5px;
+}
+
+.triangle{
+width:0;
+height:0;
+border-left:10px solid transparent;
+border-right:10px solid transparent;
+border-bottom:20px solid black;
+display:inline-block;
+margin:5px;
+}
+
 </style>
-
 </head>
 
 <body>
 
-<h2>Secure System</h2>
+<h1>Smart Banking</h1>
 
-<div id="loginBox">
- <input id="loginName" placeholder="Enter Name"><br>
- <button onclick="login()">Login</button>
-</div>
+<div class="container" id="home">
 
-<div id="pinBox" class="hidden">
- <h3>Enter PIN</h3>
- <input id="pinInput" type="password"><br>
- <button onclick="checkPin()">Submit</button>
-</div>
-
-<div id="scannerBox" class="hidden">
- <div class="container">
-  <video id="video" autoplay playsinline></video>
-  <div class="guide-line"></div>
- </div>
-</div>
-
-<p id="status">Scanner ready...</p>
-
-<div id="userPanel" class="hidden">
- <h3>User Dashboard</h3>
-
- <p id="details"></p>
-
- <button onclick="showTransaction()">Send Money</button>
- <button onclick="logout()">Logout</button>
-
- <div id="transactionBox" class="hidden">
-  <h4>Transaction</h4>
-  <input id="toUser" placeholder="Receiver"><br>
-  <input id="amount" placeholder="Amount"><br>
-  <button onclick="sendMoney()">Send</button>
- </div>
+<button onclick="showCreate()">Create Account</button>
+<button onclick="showLogin()">Login</button>
 
 </div>
 
-<div id="adminPanel" class="hidden">
- <h3>Admin Panel</h3>
+<div id="create" style="display:none">
 
- <input id="name" placeholder="Name"><br>
- <input id="job" placeholder="Job"><br>
- <input id="cnic" placeholder="CNIC"><br>
- <input id="card" placeholder="Card"><br>
- <input id="national" placeholder="National"><br>
- <input id="pattern" placeholder="Pattern"><br>
- <input id="pin" placeholder="PIN"><br>
- <input id="balance" placeholder="Balance"><br>
+<h2>Create Account</h2>
 
- <button onclick="saveUser()">Save</button>
+<input id="name" placeholder="Name"><br>
+<input id="card" placeholder="Card Number"><br>
+<input id="code" placeholder="8 Digit Code"><br>
 
- <h4>All Accounts</h4>
- <table id="table"></table>
+<button onclick="createAccount()">Create</button>
 
- <button onclick="logout()">Logout</button>
+</div>
+
+<div id="login" style="display:none">
+
+<h2>Enter Card Number</h2>
+
+<input id="loginCard" placeholder="Card Number"><br>
+
+<button onclick="startScanner()">Start Scanner</button>
+
+<div class="cameraBox">
+
+<video id="camera" autoplay></video>
+<div class="scanline"></div>
+
+</div>
+
+<br>
+
+<input id="scanCode" placeholder="Scan Result"><br>
+
+<button onclick="login()">Login</button>
+
+</div>
+
+<div id="account" style="display:none">
+
+<h2>Account Dashboard</h2>
+<p id="user"></p>
+
 </div>
 
 <script>
 
-let users = JSON.parse(localStorage.getItem("users") || "[]");
+function showCreate(){
+document.getElementById("home").style.display="none"
+document.getElementById("create").style.display="block"
+}
 
-let video=document.getElementById("video");
-let stream;
-let currentUser=null;
-let editingIndex=-1;
+function showLogin(){
+document.getElementById("home").style.display="none"
+document.getElementById("login").style.display="block"
+}
 
-// LOGIN
+function createAccount(){
+
+let name=document.getElementById("name").value
+let card=document.getElementById("card").value
+let code=document.getElementById("code").value
+
+let data={name,card,code}
+
+localStorage.setItem("bank_"+card,JSON.stringify(data))
+
+alert("Account Created")
+
+}
+
+async function startScanner(){
+
+let stream=await navigator.mediaDevices.getUserMedia({video:true})
+
+document.getElementById("camera").srcObject=stream
+
+}
+
 function login(){
- let name=loginName.value;
 
- currentUser = users.find(u=>u.name===name);
+let card=document.getElementById("loginCard").value
+let code=document.getElementById("scanCode").value
 
- if(!currentUser){
-  alert("User not found");
-  return;
- }
+let data=localStorage.getItem("bank_"+card)
 
- startCam();
+if(!data){
+alert("Account not found")
+return
 }
 
-// CAMERA (BACK)
-function startCam(){
- navigator.mediaDevices.getUserMedia({
-  video:{facingMode:"environment"}
- })
- .then(s=>{
-  stream=s;
-  video.srcObject=s;
-  scannerBox.classList.remove("hidden");
-  scan();
- });
+data=JSON.parse(data)
+
+if(data.code==code){
+
+document.getElementById("login").style.display="none"
+document.getElementById("account").style.display="block"
+
+document.getElementById("user").innerText="Welcome "+data.name
+
+}else{
+
+alert("Scan Failed")
+
 }
 
-function stopCam(){
- if(stream) stream.getTracks().forEach(t=>t.stop());
-}
-
-// SCANNER (READINGS ONLY)
-function scan(){
-
- let canvas=document.createElement("canvas");
- let ctx=canvas.getContext("2d");
-
- function loop(){
-
-  if(!stream) return;
-
-  canvas.width=video.videoWidth;
-  canvas.height=video.videoHeight;
-
-  ctx.drawImage(video,0,0);
-
-  let img=ctx.getImageData(0,0,canvas.width,canvas.height);
-  let sum=0;
-
-  for(let i=0;i<img.data.length;i+=4){
-   sum += (img.data[i]+img.data[i+1]+img.data[i+2])/3;
-  }
-
-  let avg = Math.floor(sum/(img.data.length/4));
-
-  status.innerText = "Scanner Reading: " + avg;
-
-  requestAnimationFrame(loop);
- }
-
- loop();
-}
-
-// PIN CHECK
-function checkPin(){
-
- if(currentUser && pinInput.value == currentUser.pin){
-
-  pinBox.classList.add("hidden");
-
-  if(currentUser.name==="admin"){
-   showAdmin();
-  } else {
-   showUser();
-  }
-
- } else {
-  alert("Wrong PIN");
- }
-}
-
-// USER
-function showUser(){
- userPanel.classList.remove("hidden");
-
- details.innerHTML=`
- Name: ${currentUser.name}<br>
- Job: ${currentUser.job}<br>
- CNIC: ${currentUser.cnic}<br>
- Card: ${currentUser.card}<br>
- National: ${currentUser.national}<br>
- Balance: ${currentUser.balance}
- `;
-}
-
-// ADMIN
-function showAdmin(){
- adminPanel.classList.remove("hidden");
- showTable();
-}
-
-// TABLE
-function showTable(){
-
- let t=document.getElementById("table");
-
- t.innerHTML=`
- <tr>
-  <th>Name</th><th>Job</th><th>CNIC</th>
-  <th>Card</th><th>National</th><th>PIN</th>
- </tr>
- `;
-
- users.forEach(u=>{
-  t.innerHTML+=`
-  <tr>
-   <td>${u.name}</td>
-   <td>${u.job}</td>
-   <td>${u.cnic}</td>
-   <td>${u.card}</td>
-   <td>${u.national}</td>
-   <td>${u.pin}</td>
-  </tr>
-  `;
- });
-}
-
-// SAVE USER
-function saveUser(){
-
- users.push({
-  name:name.value,
-  job:job.value,
-  cnic:cnic.value,
-  card:card.value,
-  national:national.value,
-  pattern:pattern.value,
-  pin:pin.value,
-  balance:balance.value
- });
-
- localStorage.setItem("users", JSON.stringify(users));
-
- showTable();
- alert("Saved");
-}
-
-// TRANSACTION
-function showTransaction(){
- transactionBox.classList.remove("hidden");
-}
-
-function sendMoney(){
-
- let to = users.find(u=>u.name===toUser.value);
-
- if(!to){
-  alert("User not found");
-  return;
- }
-
- let amt = Number(amount.value);
-
- if(currentUser.balance < amt){
-  alert("Insufficient balance");
-  return;
- }
-
- currentUser.balance -= amt;
- to.balance += amt;
-
- localStorage.setItem("users", JSON.stringify(users));
-
- alert("Transaction done");
-}
-
-// LOGOUT
-function logout(){
- location.reload();
 }
 
 </script>
