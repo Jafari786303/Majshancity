@@ -2,15 +2,25 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Secure Scanner App</title>
+<title>Secure Scanner</title>
 
 <style>
-body { font-family: Arial; text-align:center; background:#111; color:white; }
+body {
+ font-family: Arial;
+ text-align:center;
+ background:#111;
+ color:white;
+}
 
 video {
  width:300px;
  border:3px solid #0f0;
  border-radius:10px;
+}
+
+.container {
+ position:relative;
+ display:inline-block;
 }
 
 .guide-line {
@@ -26,13 +36,13 @@ video {
 .hidden { display:none; }
 
 button {
+ padding:8px;
  margin:5px;
- padding:10px;
 }
 
 input {
- margin:5px;
  padding:8px;
+ margin:5px;
  width:200px;
 }
 
@@ -51,7 +61,7 @@ td, th {
 
 <body>
 
-<h2>Secure Scanner</h2>
+<h2>Secure Scanner App</h2>
 
 <div id="loginBox">
  <input id="loginName" placeholder="Enter Name"><br>
@@ -60,13 +70,15 @@ td, th {
 
 <div id="pinBox" class="hidden">
  <h3>Enter PIN</h3>
- <input id="pinInput" type="password">
+ <input id="pinInput" type="password"><br>
  <button onclick="checkPin()">Submit</button>
 </div>
 
-<div id="scannerBox" class="hidden" style="position:relative; display:inline-block;">
- <video id="video" autoplay playsinline></video>
- <div class="guide-line"></div>
+<div id="scannerBox" class="hidden">
+ <div class="container">
+  <video id="video" autoplay playsinline></video>
+  <div class="guide-line"></div>
+ </div>
 </div>
 
 <canvas id="canvas" class="hidden"></canvas>
@@ -91,7 +103,7 @@ td, th {
 
  <button onclick="saveUser()">Save</button>
 
- <h4>Accounts</h4>
+ <h4>All Accounts</h4>
  <table id="table"></table>
 
  <button onclick="logout()">Logout</button>
@@ -102,41 +114,47 @@ td, th {
 let users = JSON.parse(localStorage.getItem("users") || "[]");
 
 let video = document.getElementById("video");
-let stream;
+let stream = null;
 let scanning = false;
 let currentUser = null;
 let lastPatterns = [];
 let editingIndex = -1;
 
+// LOGIN
 function login(){
  let name = loginName.value;
- currentUser = users.find(u=>u.name===name);
+ currentUser = users.find(u=>u.name === name);
 
  if(!currentUser){
   alert("User not found");
   return;
  }
 
- startCam();
+ startCamera();
 }
 
-function startCam(){
- navigator.mediaDevices.getUserMedia({video:true})
+// CAMERA (BACK CAMERA FIX)
+function startCamera(){
+ navigator.mediaDevices.getUserMedia({
+  video: { facingMode: { ideal: "environment" } }
+ })
  .then(s=>{
   stream = s;
   video.srcObject = stream;
+  scannerBox.classList.remove("hidden");
   scanning = true;
   scanLoop();
  });
 }
 
-function stopCam(){
+function stopCamera(){
  if(stream){
   stream.getTracks().forEach(t=>t.stop());
  }
  scanning = false;
 }
 
+// SCANNING (IMPROVED)
 function scanLoop(){
  if(!scanning) return;
 
@@ -156,20 +174,23 @@ function scanLoop(){
  for(let i=0;i<8;i++){
   let d=ctx.getImageData(i*step,y,1,1).data;
   let r=d[0], g=d[1], b=d[2];
-  pattern += (r>g && r>b) ? "1" : "0";
+
+  // Better detection (brightness)
+  let brightness = (r+g+b)/3;
+  pattern += brightness > 120 ? "1" : "0";
  }
 
  lastPatterns.push(pattern);
- if(lastPatterns.length>5) lastPatterns.shift();
+ if(lastPatterns.length > 5) lastPatterns.shift();
 
  let stable = lastPatterns.every(p=>p===pattern);
 
  if(stable){
-  let match = users.find(u=>u.pattern===pattern);
+  let match = users.find(u=>u.pattern === pattern);
 
   if(match){
+   stopCamera();
    currentUser = match;
-   stopCam();
    pinBox.classList.remove("hidden");
   }
  }
@@ -177,10 +198,12 @@ function scanLoop(){
  requestAnimationFrame(scanLoop);
 }
 
+// PIN CHECK
 function checkPin(){
  let pin = pinInput.value;
 
  if(currentUser && pin == currentUser.pin){
+
   pinBox.classList.add("hidden");
 
   if(currentUser.name === "admin"){
@@ -188,11 +211,13 @@ function checkPin(){
   } else {
    showUser();
   }
+
  } else {
   alert("Wrong PIN");
  }
 }
 
+// USER PANEL
 function showUser(){
  userPanel.classList.remove("hidden");
 
@@ -206,18 +231,25 @@ function showUser(){
  `;
 }
 
+// ADMIN PANEL
 function showAdmin(){
  adminPanel.classList.remove("hidden");
  showTable();
 }
 
+// SHOW TABLE
 function showTable(){
  let t=document.getElementById("table");
 
  t.innerHTML = `
  <tr>
-  <th>Name</th><th>Job</th><th>CNIC</th>
-  <th>Card</th><th>National</th><th>PIN</th><th>Action</th>
+  <th>Name</th>
+  <th>Job</th>
+  <th>CNIC</th>
+  <th>Card</th>
+  <th>National</th>
+  <th>PIN</th>
+  <th>Action</th>
  </tr>
  `;
 
@@ -236,6 +268,7 @@ function showTable(){
  });
 }
 
+// SAVE USER
 function saveUser(){
  let u = {
   name:name.value,
@@ -260,6 +293,7 @@ function saveUser(){
  alert("Saved");
 }
 
+// EDIT USER
 function editUser(i){
  let u = users[i];
 
@@ -275,6 +309,7 @@ function editUser(i){
  editingIndex = i;
 }
 
+// LOGOUT
 function logout(){
  location.reload();
 }
