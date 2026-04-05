@@ -47,6 +47,16 @@ input{
 }
 
 .hidden{ display:none; }
+
+/* CAMERA GUIDE LINE */
+.line{
+ position:absolute;
+ top:50%;
+ left:5%;
+ width:90%;
+ height:2px;
+ background:red;
+}
 </style>
 </head>
 
@@ -56,7 +66,11 @@ input{
 
 <h2>Secure Banking System</h2>
 
-<video id="video" autoplay playsinline></video>
+<div style="position:relative;">
+ <video id="video" autoplay playsinline></video>
+ <div class="line"></div>
+</div>
+
 <canvas id="canvas" class="hidden"></canvas>
 
 <br>
@@ -64,13 +78,15 @@ input{
 
 <p id="patternText"></p>
 
-<div id="loginArea" class="card hidden">
+<!-- PIN SECTION -->
+<div id="pinArea" class="card hidden">
 <h3>Enter PIN</h3>
 <input type="password" id="pinInput">
 <br>
 <button onclick="verifyPin()">Verify</button>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
 <h3 id="userName"></h3>
@@ -91,46 +107,43 @@ input{
 <button onclick="changePin()">Update PIN</button>
 </div>
 
+<button onclick="logout()" style="background:red;">Logout</button>
+
 </div>
 
 </div>
 
 <script>
 
-let video, currentUser=null, currentPattern="";
+let video,currentUser=null,currentPattern="";
 let history=[];
 
-// LOAD USERS FROM STORAGE OR CREATE
-let users = JSON.parse(localStorage.getItem("users"));
-
-if(!users){
- users=[
-  {name:"Muhammad",pattern:"10100101",pin:"1234",balance:5000},
-  {name:"Hassan",pattern:"11001100",pin:"2222",balance:8000},
-  {name:"Hussain",pattern:"00110011",pin:"3333",balance:12000}
- ];
- localStorage.setItem("users",JSON.stringify(users));
-}
+// USERS
+let users=[
+{name:"Muhammad",pattern:"10100101",pin:"1234",balance:5000},
+{name:"Hassan",pattern:"11001100",pin:"2222",balance:8000},
+{name:"Hussain",pattern:"00110011",pin:"3333",balance:12000}
+];
 
 // INIT
 window.onload=function(){
  video=document.getElementById("video");
 }
 
-// START CAMERA
+// CAMERA
 function startCam(){
  navigator.mediaDevices.getUserMedia({
   video:{ facingMode:"environment" }
  })
  .then(stream=>{
   video.srcObject=stream;
-  startScan();
+  scanLoop();
  })
  .catch(()=>alert("Camera error"));
 }
 
 // AUTO SCAN
-function startScan(){
+function scanLoop(){
  function loop(){
   scan();
   requestAnimationFrame(loop);
@@ -138,7 +151,7 @@ function startScan(){
  loop();
 }
 
-// SCANNER
+// SCAN
 function scan(){
  if(video.videoWidth===0) return;
 
@@ -158,7 +171,7 @@ function scan(){
  for(let i=0;i<8;i++){
   let x=i*step+step/2;
 
-  let blue=0, red=0;
+  let blue=0,red=0;
 
   for(let dx=-3;dx<=3;dx++){
    for(let dy=-3;dy<=3;dy++){
@@ -178,7 +191,7 @@ function scan(){
  history.push(bits);
  if(history.length>5) history.shift();
 
- document.getElementById("patternText").innerText=bits;
+ document.getElementById("patternText").innerText="Pattern: "+bits;
 
  let stable = history.length===5 && history.every(v=>v===bits);
 
@@ -187,18 +200,16 @@ function scan(){
  }
 }
 
-// MATCH PATTERN
+// PATTERN MATCH
 function matchPattern(p){
 
  let user=users.find(u=>u.pattern===p);
 
  if(user){
   currentUser=user;
-
-  document.getElementById("loginArea").classList.remove("hidden");
-
+  document.getElementById("pinArea").classList.remove("hidden");
  }else{
-  document.getElementById("loginArea").classList.add("hidden");
+  document.getElementById("pinArea").classList.add("hidden");
   document.getElementById("dashboard").classList.add("hidden");
  }
 }
@@ -210,7 +221,7 @@ function verifyPin(){
 
  if(currentUser && pin===currentUser.pin){
 
-  document.getElementById("loginArea").classList.add("hidden");
+  document.getElementById("pinArea").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
 
   document.getElementById("userName").innerText=currentUser.name;
@@ -218,6 +229,11 @@ function verifyPin(){
 
  }else{
   alert("Wrong PIN");
+
+  // RESET FLOW
+  document.getElementById("pinInput").value="";
+  currentUser=null;
+  document.getElementById("pinArea").classList.add("hidden");
  }
 }
 
@@ -231,8 +247,8 @@ function transfer(){
 
  if(receiver && amt>0 && currentUser.balance>=amt){
 
-  currentUser.balance -= amt;
-  receiver.balance += amt;
+  currentUser.balance-=amt;
+  receiver.balance+=amt;
 
   save();
 
@@ -259,7 +275,18 @@ function changePin(){
  }
 }
 
-// SAVE DATA
+// LOGOUT
+function logout(){
+
+ currentUser=null;
+
+ document.getElementById("dashboard").classList.add("hidden");
+ document.getElementById("pinArea").classList.add("hidden");
+
+ alert("Logged out");
+}
+
+// SAVE
 function save(){
  localStorage.setItem("users",JSON.stringify(users));
 }
