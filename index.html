@@ -2,93 +2,120 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bank Scanner</title>
+<title>Secure Bank</title>
+
 <style>
 body{
  font-family:Arial;
+ background:#0f172a;
+ color:white;
  text-align:center;
- background:#111;
- color:#fff;
+ margin:0;
+}
+
+.container{
+ padding:15px;
+}
+
+.card{
+ background:#1e293b;
+ padding:15px;
+ margin:10px;
+ border-radius:10px;
+}
+
+button{
+ padding:10px 15px;
+ margin:5px;
+ border:none;
+ border-radius:8px;
+ background:#3b82f6;
+ color:white;
+ font-size:16px;
+}
+
+input{
+ padding:10px;
+ margin:5px;
+ border-radius:8px;
+ border:none;
+ width:80%;
 }
 
 video{
  width:90%;
- border:3px solid #fff;
+ border-radius:10px;
  margin-top:10px;
 }
-
-button{
- padding:10px;
- margin:5px;
- font-size:16px;
-}
 </style>
+
 </head>
 
 <body>
 
-<h2>Bank Scanner</h2>
+<div class="container">
 
+<h2>Secure Banking System</h2>
+
+<!-- CAMERA -->
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas" style="display:none;"></canvas>
 
 <br>
-<button onclick="start()">Start Camera</button>
+<button onclick="startCam()">Start Camera</button>
 <button onclick="scan()">Scan</button>
 
-<p id="livebits">Pattern: </p>
+<p id="patternText">Pattern: </p>
 
-<!-- Admin -->
-<br><br>
-<input type="password" id="adminPass" placeholder="Admin password">
-<button onclick="adminLogin()">Admin</button>
+<!-- LOGIN -->
+<div class="card">
+<h3>Login</h3>
+<input type="password" id="patternInput" placeholder="Enter Pattern">
+<br>
+<button onclick="manualLogin()">Login</button>
+</div>
 
+<!-- ADMIN -->
+<div class="card">
+<h3>Admin</h3>
+<input type="password" id="adminPass" placeholder="Admin Password">
+<br>
+<button onclick="adminLogin()">Open Admin</button>
 <pre id="adminPanel"></pre>
+</div>
+
+</div>
 
 <script>
 
 let video=document.getElementById("video")
-let stream=null
-
 let history=[]
 let last=""
 
-// USERS DATABASE
+// USERS
 let users=[
-{
- name:"Muhammad",
- pattern:"10100101",
- balance:5000
-},
-{
- name:"Hassan",
- pattern:"11001100",
- balance:8000
-},
-{
- name:"Hussain",
- pattern:"00110011",
- balance:12000
-}
+{name:"Muhammad",pattern:"10100101",balance:5000},
+{name:"Hassan",pattern:"11001100",balance:8000},
+{name:"Hussain",pattern:"00110011",balance:12000}
 ]
 
+// ADMIN PASSWORD
 let adminPassword="mjgogog786"
 
-// START CAMERA (BACK CAMERA)
-function start(){
+// CAMERA START
+function startCam(){
  navigator.mediaDevices.getUserMedia({
   video:{ facingMode:"environment" }
  })
- .then(s=>{
-  stream=s
-  video.srcObject=s
+ .then(stream=>{
+  video.srcObject=stream
  })
  .catch(()=>{
   alert("Camera not allowed")
  })
 }
 
-// SCANNER
+// SCANNER (STABLE VERSION)
 function scan(){
  if(video.videoWidth===0) return
 
@@ -108,52 +135,43 @@ function scan(){
  for(let i=0;i<8;i++){
   let x=i*step+step/2
 
-  let redCount=0
-  let blueCount=0
+  let blue=0
+  let red=0
 
-  for(let dx=-6;dx<=6;dx++){
-   for(let dy=-6;dy<=6;dy++){
+  for(let dx=-5;dx<=5;dx++){
+   for(let dy=-5;dy<=5;dy++){
+
     let d=ctx.getImageData(x+dx,y+dy,1,1).data
+    let r=d[0],g=d[1],b=d[2]
 
-    let r=d[0], g=d[1], b=d[2]
-
-    // RED → 0
-    if(r > 140 && r > g+30 && r > b+30){
-     redCount++
+    if(r>150 && r>g+30 && r>b+30){
+     red++
     }
 
-    // BLUE → 1
-    else if(b > 120 && b > r+15){
-     blueCount++
+    if(b>130 && b>r+20){
+     blue++
     }
+
    }
   }
 
-  if(blueCount > redCount){
-   bits+="1"
-  }else if(redCount > blueCount){
-   bits+="0"
-  }else{
-   bits+="-"
-  }
+  bits += blue > red ? "1" : "0"
  }
 
  history.push(bits)
  if(history.length>3) history.shift()
 
- let stable = history.every(v=>v===bits)
+ document.getElementById("patternText").innerText="Pattern: "+bits
 
- document.getElementById("livebits").innerText="Pattern: "+bits
-
- if(stable && bits!==last && !bits.includes("-")){
+ if(history.every(v=>v===bits) && bits!==last){
   login(bits)
   last=bits
  }
 }
 
-// LOGIN CHECK
-function login(pattern){
- let user=users.find(u=>u.pattern===pattern)
+// LOGIN
+function login(p){
+ let user=users.find(u=>u.pattern===p)
 
  if(user){
   alert("Welcome "+user.name)
@@ -162,12 +180,18 @@ function login(pattern){
  }
 }
 
-// ADMIN LOGIN
+// MANUAL LOGIN
+function manualLogin(){
+ let p=document.getElementById("patternInput").value
+ login(p)
+}
+
+// ADMIN
 function adminLogin(){
  let pass=document.getElementById("adminPass").value
 
  if(pass===adminPassword){
-  let txt="Admin Panel\n\n"
+  let txt="ADMIN PANEL\n\n"
 
   users.forEach(u=>{
    txt+=`Name: ${u.name}\nPattern: ${u.pattern}\nBalance: ${u.balance}\n\n`
