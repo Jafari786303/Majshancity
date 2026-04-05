@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Secure Scanner</title>
+<title>Secure App</title>
 
 <style>
 body{
@@ -30,20 +30,13 @@ video{
  width:90%;
  height:3px;
  background:red;
- box-shadow:0 0 10px red;
 }
 
 .hidden{display:none;}
 
-button{
+input, button{
  padding:8px;
  margin:5px;
-}
-
-input{
- padding:8px;
- margin:5px;
- width:200px;
 }
 
 table{
@@ -61,7 +54,7 @@ td,th{
 
 <body>
 
-<h2>Secure Scanner</h2>
+<h2>Secure System</h2>
 
 <div id="loginBox">
  <input id="loginName" placeholder="Enter Name"><br>
@@ -81,14 +74,23 @@ td,th{
  </div>
 </div>
 
-<p id="status">Waiting...</p>
-
-<canvas id="canvas" class="hidden"></canvas>
+<p id="status">Scanner ready...</p>
 
 <div id="userPanel" class="hidden">
- <h3>User Details</h3>
+ <h3>User Dashboard</h3>
+
  <p id="details"></p>
+
+ <button onclick="showTransaction()">Send Money</button>
  <button onclick="logout()">Logout</button>
+
+ <div id="transactionBox" class="hidden">
+  <h4>Transaction</h4>
+  <input id="toUser" placeholder="Receiver"><br>
+  <input id="amount" placeholder="Amount"><br>
+  <button onclick="sendMoney()">Send</button>
+ </div>
+
 </div>
 
 <div id="adminPanel" class="hidden">
@@ -105,7 +107,7 @@ td,th{
 
  <button onclick="saveUser()">Save</button>
 
- <h4>Accounts</h4>
+ <h4>All Accounts</h4>
  <table id="table"></table>
 
  <button onclick="logout()">Logout</button>
@@ -115,16 +117,14 @@ td,th{
 
 let users = JSON.parse(localStorage.getItem("users") || "[]");
 
-let video = document.getElementById("video");
+let video=document.getElementById("video");
 let stream;
-let scanning=false;
 let currentUser=null;
-let lastPatterns=[];
 let editingIndex=-1;
 
 // LOGIN
 function login(){
- let name = loginName.value;
+ let name=loginName.value;
 
  currentUser = users.find(u=>u.name===name);
 
@@ -136,100 +136,74 @@ function login(){
  startCam();
 }
 
-// CAMERA FIX (BACK CAMERA)
+// CAMERA (BACK)
 function startCam(){
  navigator.mediaDevices.getUserMedia({
-  video:{ facingMode:{ideal:"environment"} }
+  video:{facingMode:"environment"}
  })
  .then(s=>{
   stream=s;
   video.srcObject=s;
   scannerBox.classList.remove("hidden");
-  scanning=true;
-  scanLoop();
+  scan();
  });
 }
 
 function stopCam(){
- if(stream){
-  stream.getTracks().forEach(t=>t.stop());
- }
- scanning=false;
+ if(stream) stream.getTracks().forEach(t=>t.stop());
 }
 
-// SCAN LOOP
-function scanLoop(){
- if(!scanning) return;
+// SCANNER (READINGS ONLY)
+function scan(){
 
- let canvas=document.getElementById("canvas");
+ let canvas=document.createElement("canvas");
  let ctx=canvas.getContext("2d");
 
- canvas.width=video.videoWidth;
- canvas.height=video.videoHeight;
+ function loop(){
 
- ctx.drawImage(video,0,0);
+  if(!stream) return;
 
- let y=canvas.height/2;
- let step=canvas.width/8;
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
 
- let pattern="";
+  ctx.drawImage(video,0,0);
 
- for(let i=0;i<8;i++){
-  let d=ctx.getImageData(i*step,y,1,1).data;
-  let r=d[0],g=d[1],b=d[2];
+  let img=ctx.getImageData(0,0,canvas.width,canvas.height);
+  let sum=0;
 
-  let brightness=(r+g+b)/3;
-
-  pattern += brightness > 130 ? "1" : "0";
- }
-
- // SHOW PATTERN
- status.innerText="Pattern: "+pattern;
-
- // STABILITY CHECK
- lastPatterns.push(pattern);
- if(lastPatterns.length>5) lastPatterns.shift();
-
- let stable = lastPatterns.every(p=>p===pattern);
-
- if(stable){
-
-  let match = users.find(u=>{
-   let diff=0;
-
-   for(let i=0;i<u.pattern.length;i++){
-    if(u.pattern[i]!==pattern[i]) diff++;
-   }
-
-   return diff<=2;
-  });
-
-  if(match){
-   stopCam();
-   currentUser=match;
-   pinBox.classList.remove("hidden");
+  for(let i=0;i<img.data.length;i+=4){
+   sum += (img.data[i]+img.data[i+1]+img.data[i+2])/3;
   }
+
+  let avg = Math.floor(sum/(img.data.length/4));
+
+  status.innerText = "Scanner Reading: " + avg;
+
+  requestAnimationFrame(loop);
  }
 
- requestAnimationFrame(scanLoop);
+ loop();
 }
 
 // PIN CHECK
 function checkPin(){
- if(currentUser && pinInput.value==currentUser.pin){
+
+ if(currentUser && pinInput.value == currentUser.pin){
+
   pinBox.classList.add("hidden");
 
   if(currentUser.name==="admin"){
    showAdmin();
-  }else{
+  } else {
    showUser();
   }
- }else{
+
+ } else {
   alert("Wrong PIN");
  }
 }
 
-// USER PANEL
+// USER
 function showUser(){
  userPanel.classList.remove("hidden");
 
@@ -243,7 +217,7 @@ function showUser(){
  `;
 }
 
-// ADMIN PANEL
+// ADMIN
 function showAdmin(){
  adminPanel.classList.remove("hidden");
  showTable();
@@ -251,21 +225,17 @@ function showAdmin(){
 
 // TABLE
 function showTable(){
+
  let t=document.getElementById("table");
 
  t.innerHTML=`
  <tr>
-  <th>Name</th>
-  <th>Job</th>
-  <th>CNIC</th>
-  <th>Card</th>
-  <th>National</th>
-  <th>PIN</th>
-  <th>Action</th>
+  <th>Name</th><th>Job</th><th>CNIC</th>
+  <th>Card</th><th>National</th><th>PIN</th>
  </tr>
  `;
 
- users.forEach((u,i)=>{
+ users.forEach(u=>{
   t.innerHTML+=`
   <tr>
    <td>${u.name}</td>
@@ -274,7 +244,6 @@ function showTable(){
    <td>${u.card}</td>
    <td>${u.national}</td>
    <td>${u.pin}</td>
-   <td><button onclick="editUser(${i})">Edit</button></td>
   </tr>
   `;
  });
@@ -283,7 +252,7 @@ function showTable(){
 // SAVE USER
 function saveUser(){
 
- let u={
+ users.push({
   name:name.value,
   job:job.value,
   cnic:cnic.value,
@@ -292,34 +261,41 @@ function saveUser(){
   pattern:pattern.value,
   pin:pin.value,
   balance:balance.value
- };
+ });
 
- if(editingIndex>=0){
-  users[editingIndex]=u;
-  editingIndex=-1;
- }else{
-  users.push(u);
- }
+ localStorage.setItem("users", JSON.stringify(users));
 
- localStorage.setItem("users",JSON.stringify(users));
  showTable();
  alert("Saved");
 }
 
-// EDIT
-function editUser(i){
- let u=users[i];
+// TRANSACTION
+function showTransaction(){
+ transactionBox.classList.remove("hidden");
+}
 
- name.value=u.name;
- job.value=u.job;
- cnic.value=u.cnic;
- card.value=u.card;
- national.value=u.national;
- pattern.value=u.pattern;
- pin.value=u.pin;
- balance.value=u.balance;
+function sendMoney(){
 
- editingIndex=i;
+ let to = users.find(u=>u.name===toUser.value);
+
+ if(!to){
+  alert("User not found");
+  return;
+ }
+
+ let amt = Number(amount.value);
+
+ if(currentUser.balance < amt){
+  alert("Insufficient balance");
+  return;
+ }
+
+ currentUser.balance -= amt;
+ to.balance += amt;
+
+ localStorage.setItem("users", JSON.stringify(users));
+
+ alert("Transaction done");
 }
 
 // LOGOUT
