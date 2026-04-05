@@ -13,9 +13,7 @@ body{
  text-align:center;
 }
 
-.container{
- padding:15px;
-}
+.container{ padding:15px; }
 
 video{
  width:90%;
@@ -25,7 +23,7 @@ video{
 }
 
 button{
- padding:10px 15px;
+ padding:10px;
  margin:5px;
  border:none;
  border-radius:8px;
@@ -39,6 +37,16 @@ button{
  margin:10px;
  border-radius:10px;
 }
+
+input{
+ padding:8px;
+ margin:5px;
+ width:80%;
+ border-radius:6px;
+ border:none;
+}
+
+.hidden{ display:none; }
 </style>
 </head>
 
@@ -49,44 +57,65 @@ button{
 <h2>Secure Banking System</h2>
 
 <video id="video" autoplay playsinline></video>
-<canvas id="canvas" style="display:none;"></canvas>
+<canvas id="canvas" class="hidden"></canvas>
 
 <br>
-
 <button onclick="startCam()">Start Camera</button>
 
-<p id="patternText">Pattern: ---</p>
+<p id="patternText"></p>
+
+<div id="loginArea" class="card hidden">
+<h3>Enter PIN</h3>
+<input type="password" id="pinInput">
+<br>
+<button onclick="verifyPin()">Verify</button>
+</div>
+
+<div id="dashboard" class="hidden">
+
+<h3 id="userName"></h3>
+<p id="balance"></p>
 
 <div class="card">
-<h3>Admin</h3>
-<input type="password" id="adminPass" placeholder="Admin Password">
+<h3>Transfer Money</h3>
+<input id="toUser" placeholder="Recipient Name">
+<input id="amount" placeholder="Amount">
 <br>
-<button onclick="adminLogin()">Login Admin</button>
-<pre id="adminPanel"></pre>
+<button onclick="transfer()">Send</button>
+</div>
+
+<div class="card">
+<h3>Change PIN</h3>
+<input id="newPin" placeholder="New PIN">
+<br>
+<button onclick="changePin()">Update PIN</button>
+</div>
+
 </div>
 
 </div>
 
 <script>
 
-let video;
+let video, currentUser=null, currentPattern="";
 let history=[];
-let last="";
 
-// USERS
-let users=[
-{name:"Muhammad",pattern:"10100101",balance:5000},
-{name:"Hassan",pattern:"11001100",balance:8000},
-{name:"Hussain",pattern:"00110011",balance:12000}
-];
+// LOAD USERS FROM STORAGE OR CREATE
+let users = JSON.parse(localStorage.getItem("users"));
 
-// ADMIN PASSWORD
-let adminPassword="mjgogog786";
+if(!users){
+ users=[
+  {name:"Muhammad",pattern:"10100101",pin:"1234",balance:5000},
+  {name:"Hassan",pattern:"11001100",pin:"2222",balance:8000},
+  {name:"Hussain",pattern:"00110011",pin:"3333",balance:12000}
+ ];
+ localStorage.setItem("users",JSON.stringify(users));
+}
 
-// WAIT UNTIL PAGE LOADS
+// INIT
 window.onload=function(){
  video=document.getElementById("video");
-};
+}
 
 // START CAMERA
 function startCam(){
@@ -95,16 +124,13 @@ function startCam(){
  })
  .then(stream=>{
   video.srcObject=stream;
-  startScanning();
+  startScan();
  })
- .catch(err=>{
-  alert("Camera not allowed or not supported");
-  console.log(err);
- });
+ .catch(()=>alert("Camera error"));
 }
 
-// AUTO SCANNING
-function startScanning(){
+// AUTO SCAN
+function startScan(){
  function loop(){
   scan();
   requestAnimationFrame(loop);
@@ -112,9 +138,9 @@ function startScanning(){
  loop();
 }
 
-// SCAN FUNCTION
+// SCANNER
 function scan(){
- if(!video || video.videoWidth===0) return;
+ if(video.videoWidth===0) return;
 
  let canvas=document.getElementById("canvas");
  let ctx=canvas.getContext("2d");
@@ -132,14 +158,13 @@ function scan(){
  for(let i=0;i<8;i++){
   let x=i*step+step/2;
 
-  let blue=0;
-  let red=0;
+  let blue=0, red=0;
 
-  for(let dx=-4;dx<=4;dx++){
-   for(let dy=-4;dy<=4;dy++){
+  for(let dx=-3;dx<=3;dx++){
+   for(let dy=-3;dy<=3;dy++){
 
     let d=ctx.getImageData(x+dx,y+dy,1,1).data;
-    let r=d[0], g=d[1], b=d[2];
+    let r=d[0],g=d[1],b=d[2];
 
     if(r>150 && r>g+30 && r>b+30) red++;
     if(b>130 && b>r+20) blue++;
@@ -147,48 +172,96 @@ function scan(){
    }
   }
 
-  bits += (blue > red) ? "1" : "0";
+  bits += blue>red ? "1" : "0";
  }
 
  history.push(bits);
  if(history.length>5) history.shift();
 
- document.getElementById("patternText").innerText="Pattern: "+bits;
+ document.getElementById("patternText").innerText=bits;
 
  let stable = history.length===5 && history.every(v=>v===bits);
 
- if(stable && bits!==last && !bits.includes("-")){
-  login(bits);
-  last=bits;
+ if(stable){
+  matchPattern(bits);
  }
 }
 
-// LOGIN
-function login(p){
+// MATCH PATTERN
+function matchPattern(p){
+
  let user=users.find(u=>u.pattern===p);
 
  if(user){
-  alert("Welcome "+user.name);
+  currentUser=user;
+
+  document.getElementById("loginArea").classList.remove("hidden");
+
  }else{
-  alert("Access Denied");
+  document.getElementById("loginArea").classList.add("hidden");
+  document.getElementById("dashboard").classList.add("hidden");
  }
 }
 
-// ADMIN
-function adminLogin(){
- let pass=document.getElementById("adminPass").value;
+// PIN VERIFY
+function verifyPin(){
 
- if(pass===adminPassword){
-  let txt="ADMIN PANEL\n\n";
+ let pin=document.getElementById("pinInput").value;
 
-  users.forEach(u=>{
-   txt+=`Name: ${u.name}\nPattern: ${u.pattern}\nBalance: ${u.balance}\n\n`;
-  });
+ if(currentUser && pin===currentUser.pin){
 
-  document.getElementById("adminPanel").innerText=txt;
+  document.getElementById("loginArea").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+
+  document.getElementById("userName").innerText=currentUser.name;
+  document.getElementById("balance").innerText="Balance: "+currentUser.balance;
+
  }else{
-  alert("Wrong password");
+  alert("Wrong PIN");
  }
+}
+
+// TRANSFER
+function transfer(){
+
+ let to=document.getElementById("toUser").value;
+ let amt=parseFloat(document.getElementById("amount").value);
+
+ let receiver=users.find(u=>u.name.toLowerCase()===to.toLowerCase());
+
+ if(receiver && amt>0 && currentUser.balance>=amt){
+
+  currentUser.balance -= amt;
+  receiver.balance += amt;
+
+  save();
+
+  document.getElementById("balance").innerText="Balance: "+currentUser.balance;
+
+  alert("Transfer Successful");
+
+ }else{
+  alert("Invalid Transfer");
+ }
+}
+
+// CHANGE PIN
+function changePin(){
+
+ let newPin=document.getElementById("newPin").value;
+
+ if(newPin.length>=4){
+  currentUser.pin=newPin;
+  save();
+  alert("PIN Updated");
+ }else{
+  alert("PIN too short");
+ }
+}
+
+// SAVE DATA
+function save(){
+ localStorage.setItem("users",JSON.stringify(users));
 }
 
 </script>
