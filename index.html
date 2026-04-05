@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure Banking Scanner</title>
+<title>Secure Bank System</title>
 
 <style>
 body{
@@ -19,10 +19,7 @@ video{
  width:90%;
  border-radius:10px;
  margin-top:10px;
- background:black;
 }
-
-canvas{ display:none; }
 
 .card{
  background:#1e293b;
@@ -50,13 +47,15 @@ button{
 
 .hidden{ display:none; }
 
-.line{
- position:absolute;
- top:50%;
- left:5%;
- width:90%;
- height:2px;
- background:red;
+table{
+ width:100%;
+ border-collapse:collapse;
+}
+
+td,th{
+ border:1px solid #444;
+ padding:5px;
+ font-size:12px;
 }
 </style>
 </head>
@@ -65,53 +64,63 @@ button{
 
 <div class="container">
 
-<h2>Secure Banking Scanner</h2>
+<h2>Bank System</h2>
 
-<div style="position:relative;">
- <video id="video" autoplay playsinline></video>
- <div class="line"></div>
-</div>
+<button onclick="startCam()">Start Scanner</button>
+<button onclick="openAdmin()">Admin Panel</button>
 
-<canvas id="canvas"></canvas>
+<video id="video" autoplay playsinline></video>
 
 <p id="status">Scanning...</p>
 
-<button onclick="startCamera()">Start Camera</button>
-<button onclick="openAdmin()">Admin Panel</button>
+<canvas id="canvas"></canvas>
 
 <!-- PIN -->
 <div id="pinBox" class="card hidden">
 <h3>Enter PIN</h3>
 <input type="password" id="pinInput">
 <br>
-<button onclick="checkPin()">Confirm</button>
+<button onclick="verifyPin()">Confirm</button>
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="hidden card">
-<h3 id="userName"></h3>
-<p id="details"></p>
-
+<div id="dash" class="card hidden">
+<h3 id="name"></h3>
+<p id="info"></p>
 <button onclick="logout()">Logout</button>
 </div>
 
-<!-- ADMIN -->
-<div id="adminBox" class="card hidden">
+<!-- ADMIN LOGIN -->
+<div id="adminLogin" class="card hidden">
+<h3>Admin Login</h3>
+<input type="password" id="adminPass" placeholder="Enter Admin Password">
+<br>
+<button onclick="checkAdmin()">Login</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="card hidden">
+
 <h3>Admin Panel</h3>
 
-<input id="name" placeholder="Name">
-<input id="job" placeholder="Job">
-<input id="cnic" placeholder="CNIC">
-<input id="card" placeholder="Card No">
-<input id="pattern" placeholder="Pattern">
-<input id="pin" placeholder="PIN">
-<input id="balance" placeholder="Balance">
+<input id="aname" placeholder="Name">
+<input id="ajob" placeholder="Job">
+<input id="acnic" placeholder="CNIC">
+<input id="acard" placeholder="Card No">
+<input id="apattern" placeholder="Pattern">
+<input id="apin" placeholder="PIN">
+<input id="abal" placeholder="Balance">
 
 <br>
 <button onclick="saveUser()">Save User</button>
 
-<br><br>
+<h3>All Accounts</h3>
+
+<table id="table"></table>
+
+<br>
 <button onclick="closeAdmin()">Close</button>
+
 </div>
 
 </div>
@@ -122,17 +131,17 @@ let video=document.getElementById("video");
 let scanning=true;
 let currentUser=null;
 
-// USERS
-let users=JSON.parse(localStorage.getItem("users")) || [];
+const ADMIN_PASSWORD="admin123";
+
+let users=JSON.parse(localStorage.getItem("users"))||[];
 
 // CAMERA
-function startCamera(){
+function startCam(){
  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
  .then(stream=>{
   video.srcObject=stream;
   scanLoop();
- })
- .catch(()=>alert("Camera error"));
+ });
 }
 
 // SCAN LOOP
@@ -144,7 +153,18 @@ function scanLoop(){
  loop();
 }
 
-// SCAN FUNCTION
+// PATTERN MATCH WITH TOLERANCE
+function compare(p1,p2){
+ let match=0;
+
+ for(let i=0;i<p1.length;i++){
+  if(p1[i]===p2[i]) match++;
+ }
+
+ return match/p1.length; // percentage
+}
+
+// SCAN
 function scan(){
 
  let canvas=document.getElementById("canvas");
@@ -161,40 +181,39 @@ function scan(){
  let pattern="";
 
  for(let i=0;i<8;i++){
-  let x=i*step;
+  let d=ctx.getImageData(i*step,y,1,1).data;
+  let r=d[0],g=d[1],b=d[2];
 
-  let d=ctx.getImageData(x,y,1,1).data;
-  let r=d[0], g=d[1], b=d[2];
-
-  pattern += (r>b && r>g) ? "1" : "0";
+  pattern += (r>g && r>b) ? "1":"0";
  }
 
  document.getElementById("status").innerText=pattern;
 
- let user=users.find(u=>u.pattern===pattern);
+ users.forEach(u=>{
+  let score=compare(pattern,u.pattern);
 
- if(user){
-  scanning=false; // STOP SCANNER
+  if(score>=0.75){ // 🔥 tolerance fix
 
-  currentUser=user;
+   scanning=false;
+   currentUser=u;
 
-  document.getElementById("pinBox").classList.remove("hidden");
- }
+   document.getElementById("pinBox").classList.remove("hidden");
+  }
+ });
 }
 
 // PIN CHECK
-function checkPin(){
+function verifyPin(){
 
  let pin=document.getElementById("pinInput").value;
 
  if(currentUser && pin===currentUser.pin){
 
   document.getElementById("pinBox").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
+  document.getElementById("dash").classList.remove("hidden");
 
-  document.getElementById("userName").innerText=currentUser.name;
-
-  document.getElementById("details").innerHTML=`
+  document.getElementById("name").innerText=currentUser.name;
+  document.getElementById("info").innerHTML=`
    Job: ${currentUser.job}<br>
    CNIC: ${currentUser.cnic}<br>
    Card: ${currentUser.card}<br>
@@ -203,9 +222,7 @@ function checkPin(){
 
  }else{
   alert("Wrong PIN");
-  currentUser=null;
-  scanning=true; // restart scanning
-  document.getElementById("pinInput").value="";
+  scanning=true;
  }
 }
 
@@ -214,39 +231,73 @@ function logout(){
  currentUser=null;
  scanning=true;
 
- document.getElementById("dashboard").classList.add("hidden");
- document.getElementById("status").innerText="Scanning...";
+ document.getElementById("dash").classList.add("hidden");
 }
 
 // ADMIN
 function openAdmin(){
- document.getElementById("adminBox").classList.remove("hidden");
+ document.getElementById("adminLogin").classList.remove("hidden");
+}
+
+function checkAdmin(){
+
+ let pass=document.getElementById("adminPass").value;
+
+ if(pass===ADMIN_PASSWORD){
+
+  document.getElementById("adminLogin").classList.add("hidden");
+  document.getElementById("adminPanel").classList.remove("hidden");
+
+  showTable();
+
+ }else alert("Wrong Admin Password");
 }
 
 function closeAdmin(){
- document.getElementById("adminBox").classList.add("hidden");
+ document.getElementById("adminPanel").classList.add("hidden");
 }
 
+// SAVE USER
 function saveUser(){
 
  let u={
-  name:document.getElementById("name").value,
-  job:document.getElementById("job").value,
-  cnic:document.getElementById("cnic").value,
-  card:document.getElementById("card").value,
-  pattern:document.getElementById("pattern").value,
-  pin:document.getElementById("pin").value,
-  balance:document.getElementById("balance").value
+  name:aname.value,
+  job:ajob.value,
+  cnic:acnic.value,
+  card:acard.value,
+  pattern:apattern.value,
+  pin:apin.value,
+  balance:abal.value
  };
 
- let existing=users.find(x=>x.name===u.name);
+ let exist=users.find(x=>x.name===u.name);
 
- if(existing) Object.assign(existing,u);
+ if(exist) Object.assign(exist,u);
  else users.push(u);
 
  localStorage.setItem("users",JSON.stringify(users));
 
+ showTable();
  alert("Saved");
+}
+
+// SHOW ALL ACCOUNTS
+function showTable(){
+
+ let t=document.getElementById("table");
+
+ t.innerHTML="<tr><th>Name</th><th>Job</th><th>CNIC</th><th>Card</th><th>Balance</th></tr>";
+
+ users.forEach(u=>{
+  t.innerHTML+=`
+  <tr>
+   <td>${u.name}</td>
+   <td>${u.job}</td>
+   <td>${u.cnic}</td>
+   <td>${u.card}</td>
+   <td>${u.balance}</td>
+  </tr>`;
+ });
 }
 
 </script>
