@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Banking System</title>
+<title>National Digital Bank</title>
 
 <style>
 
@@ -13,18 +13,9 @@ color:white;
 text-align:center;
 }
 
-.card{
-width:320px;
-margin:auto;
-background:linear-gradient(45deg,#111,#333);
-border-radius:15px;
-padding:20px;
-box-shadow:0 0 20px cyan;
-}
-
 button{
 padding:10px;
-margin:5px;
+margin:10px;
 border:none;
 border-radius:10px;
 background:#00c6ff;
@@ -40,13 +31,22 @@ border-radius:8px;
 border:none;
 }
 
+.panel{
+display:none;
+}
+
+.card{
+width:320px;
+margin:auto;
+background:linear-gradient(45deg,#111,#333);
+border-radius:15px;
+padding:20px;
+box-shadow:0 0 20px cyan;
+}
+
 video{
 width:300px;
 border-radius:10px;
-}
-
-.panel{
-display:none;
 }
 
 </style>
@@ -56,7 +56,10 @@ display:none;
 
 <h1>National Digital Bank</h1>
 
-<div id="login">
+<button onclick="showLogin()">Login</button>
+<button onclick="showCreate()">Create Account</button>
+
+<div id="loginPanel" class="panel">
 
 <h2>Login</h2>
 
@@ -70,7 +73,23 @@ display:none;
 
 </div>
 
-<div id="account" class="panel">
+<div id="createPanel" class="panel">
+
+<h2>Create Account</h2>
+
+<input id="cname" placeholder="Name"><br>
+<input id="cjob" placeholder="Job"><br>
+<input id="ccl" placeholder="CL"><br>
+<input id="cnational" placeholder="National No"><br>
+<input id="ccard" placeholder="Card No"><br>
+
+<input id="cpattern" placeholder="Card Pattern Code (example: 010101)"><br>
+
+<button onclick="createAccount()">Create</button>
+
+</div>
+
+<div id="accountPanel" class="panel">
 
 <h2>Your Account</h2>
 
@@ -91,20 +110,6 @@ display:none;
 <input id="amount" placeholder="Amount"><br>
 
 <button onclick="transfer()">Send</button>
-
-</div>
-
-<div id="create">
-
-<h2>Create Account</h2>
-
-<input id="cname" placeholder="Name"><br>
-<input id="cjob" placeholder="Job"><br>
-<input id="ccl" placeholder="CL"><br>
-<input id="cnational" placeholder="National No"><br>
-<input id="ccard" placeholder="Card No"><br>
-
-<button onclick="createAccount()">Create</button>
 
 </div>
 
@@ -148,6 +153,16 @@ localStorage.accounts=JSON.stringify(data)
 
 }
 
+function showLogin(){
+document.getElementById("loginPanel").style.display="block"
+document.getElementById("createPanel").style.display="none"
+}
+
+function showCreate(){
+document.getElementById("createPanel").style.display="block"
+document.getElementById("loginPanel").style.display="none"
+}
+
 function startCamera(){
 
 navigator.mediaDevices.getUserMedia({video:true})
@@ -184,13 +199,13 @@ login(entered)
 
 }
 
-},500)
+},400)
 
 }
 
 function mockScan(){
 
-let patterns=["000","111","010","101"]
+let patterns=["000000","111111","010101","101010"]
 
 return patterns[Math.floor(Math.random()*patterns.length)]
 
@@ -202,35 +217,15 @@ let acc=JSON.parse(localStorage.accounts)[card]
 
 current=card
 
-document.getElementById("login").style.display="none"
+document.getElementById("loginPanel").style.display="none"
+document.getElementById("accountPanel").style.display="block"
 
-document.getElementById("account").style.display="block"
-
-document.getElementById("name").innerText=acc.name
-document.getElementById("job").innerText=acc.job
-document.getElementById("cl").innerText=acc.cl
-document.getElementById("national").innerText=acc.national
-document.getElementById("cardno").innerText=acc.card
-document.getElementById("balance").innerText=acc.balance
-
-}
-
-function transfer(){
-
-let to=document.getElementById("toCard").value
-let amount=parseInt(document.getElementById("amount").value)
-
-let accounts=JSON.parse(localStorage.accounts)
-
-if(accounts[current].balance!="Infinity")
-accounts[current].balance-=amount
-
-if(accounts[to].balance!="Infinity")
-accounts[to].balance+=amount
-
-localStorage.accounts=JSON.stringify(accounts)
-
-alert("Transfer Successful")
+name.innerText=acc.name
+job.innerText=acc.job
+cl.innerText=acc.cl
+national.innerText=acc.national
+cardno.innerText=acc.card
+balance.innerText=acc.balance
 
 }
 
@@ -242,13 +237,13 @@ let card=document.getElementById("ccard").value
 
 data[card]={
 
-name:document.getElementById("cname").value,
-job:document.getElementById("cjob").value,
-cl:document.getElementById("ccl").value,
-national:document.getElementById("cnational").value,
+name:cname.value,
+job:cjob.value,
+cl:ccl.value,
+national:cnational.value,
 card:card,
 balance:0,
-pattern:"000"
+pattern:cpattern.value
 
 }
 
@@ -258,11 +253,28 @@ alert("Account Created")
 
 }
 
+function transfer(){
+
+let to=toCard.value
+let amount=parseInt(amount.value)
+
+let data=JSON.parse(localStorage.accounts)
+
+if(data[current].balance!="Infinity")
+data[current].balance-=amount
+
+if(data[to].balance!="Infinity")
+data[to].balance+=amount
+
+localStorage.accounts=JSON.stringify(data)
+
+alert("Transfer Successful")
+
+}
+
 function adminLogin(){
 
-let pin=document.getElementById("pin").value
-
-if(pin=="303786303"){
+if(pin.value=="303786303"){
 
 document.getElementById("adminPanel").style.display="block"
 
@@ -283,6 +295,7 @@ for(let card in data){
 let a=data[card]
 
 html+=`
+
 <div class="card">
 
 Name:<input value="${a.name}" onchange="edit('${card}','name',this.value)"><br>
@@ -293,11 +306,12 @@ Card:<input value="${a.card}" onchange="edit('${card}','card',this.value)"><br>
 Balance:<input value="${a.balance}" onchange="edit('${card}','balance',this.value)"><br>
 
 </div>
+
 `
 
 }
 
-document.getElementById("accounts").innerHTML=html
+accounts.innerHTML=html
 
 }
 
