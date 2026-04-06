@@ -5,39 +5,92 @@
 <title>Mobile Bank</title>
 
 <style>
-body{
+
+*{
+box-sizing:border-box;
+}
+
+html,body{
+margin:0;
+padding:0;
+height:100%;
+width:100%;
 font-family:Arial;
 background:#0a0f1f;
 color:white;
-text-align:center;
+overflow-x:hidden;
 }
 
-.panel{
-background:#16213e;
-padding:20px;
-margin:20px;
-border-radius:10px;
-display:none;
+.container{
+min-height:100vh;
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+h2{
+margin-top:10px;
 }
 
 button{
 padding:10px;
-margin:5px;
+margin:6px;
+border:none;
+border-radius:6px;
 background:#1f4068;
 color:white;
-border:none;
-border-radius:5px;
+font-size:14px;
+flex-wrap:wrap;
+}
+
+button:hover{
+background:#2e5fa3;
+}
+
+.panel{
+background:#16213e;
+margin:10px;
+padding:15px;
+border-radius:10px;
+display:none;
+width:95%;
+max-width:420px;
+max-height:85vh;
+overflow-y:auto;
 }
 
 .close{
-background:red;
 float:right;
+background:red;
 }
 
-#video{
+input{
 width:100%;
-max-width:400px;
+padding:8px;
+margin:6px 0;
+border-radius:5px;
+border:none;
+}
+
+.card{
+width:100%;
+padding:15px;
+border-radius:15px;
+background:linear-gradient(135deg,#0f3460,#533483);
+box-shadow:0 0 15px black;
+text-align:left;
+}
+
+video{
+width:100%;
+height:auto;
 border:3px solid white;
+border-radius:6px;
+}
+
+#scanBox{
+position:relative;
+width:100%;
 }
 
 #scanLine{
@@ -54,17 +107,11 @@ animation:scan 2s infinite;
 100%{top:10%}
 }
 
-.card{
-width:300px;
-background:linear-gradient(135deg,#0f3460,#533483);
-padding:20px;
-border-radius:15px;
-margin:auto;
-}
-
-input{
-padding:8px;
-margin:5px;
+.adminCard{
+background:#1f4068;
+margin:10px 0;
+padding:10px;
+border-radius:8px;
 }
 
 </style>
@@ -72,54 +119,67 @@ margin:5px;
 
 <body>
 
+<div class="container">
+
 <h2>Mobile Bank</h2>
 
-<button onclick="showLogin()">Login</button>
-<button onclick="showCreate()">Create Account</button>
-<button onclick="showAdmin()">Admin</button>
+<div>
+
+<button onclick="showPanel('loginPanel')">Login</button>
+<button onclick="showPanel('createPanel')">Create Account</button>
+<button onclick="showPanel('adminPanel')">Admin</button>
+
+</div>
+
 
 <!-- LOGIN -->
+
 <div id="loginPanel" class="panel">
+
 <button class="close" onclick="closePanel('loginPanel')">X</button>
 
 <h3>Login</h3>
 
 <input id="loginCard" placeholder="Card Number">
 
-<br>
-
 <button onclick="startScanner()">Start Scanner</button>
 
-<div style="position:relative">
+<div id="scanBox">
+
 <video id="video" autoplay></video>
 <div id="scanLine"></div>
+
 </div>
 
 <p id="scanOutput"></p>
 
 </div>
 
-<!-- CREATE ACCOUNT -->
+
+<!-- CREATE -->
 
 <div id="createPanel" class="panel">
+
 <button class="close" onclick="closePanel('createPanel')">X</button>
 
 <h3>Create Account</h3>
 
-<input id="name" placeholder="Name"><br>
-<input id="job" placeholder="Job"><br>
-<input id="cl" placeholder="CL"><br>
-<input id="national" placeholder="National No"><br>
-<input id="card" placeholder="Card No"><br>
-<input id="pattern" placeholder="8 digit code"><br>
+<input id="name" placeholder="Name">
+<input id="job" placeholder="Job">
+<input id="cl" placeholder="CL">
+<input id="national" placeholder="National No">
+<input id="card" placeholder="Card Number">
+<input id="pattern" placeholder="8 Digit Pattern">
 
 <button onclick="createAccount()">Create</button>
 
 </div>
 
+
 <!-- ACCOUNT -->
 
 <div id="accountPanel" class="panel">
+
 <button class="close" onclick="closePanel('accountPanel')">X</button>
 
 <div class="card">
@@ -133,26 +193,31 @@ margin:5px;
 
 </div>
 
-<h3>Transfer</h3>
+<h3>Transfer Money</h3>
 
-<input id="toCard" placeholder="To Card">
+<input id="toCard" placeholder="Receiver Card">
 <input id="amount" placeholder="Amount">
 
 <button onclick="transfer()">Send</button>
 
 </div>
 
+
 <!-- ADMIN -->
 
 <div id="adminPanel" class="panel">
+
 <button class="close" onclick="closePanel('adminPanel')">X</button>
 
 <h3>Admin Login</h3>
 
 <input id="adminPin" placeholder="PIN">
+
 <button onclick="adminLogin()">Enter</button>
 
 <div id="adminArea"></div>
+
+</div>
 
 </div>
 
@@ -177,44 +242,78 @@ function save(){
 localStorage.setItem("bankAccounts",JSON.stringify(accounts))
 }
 
-function showLogin(){document.getElementById("loginPanel").style.display="block"}
-function showCreate(){document.getElementById("createPanel").style.display="block"}
-function showAdmin(){document.getElementById("adminPanel").style.display="block"}
+function showPanel(id){
+document.getElementById(id).style.display="block"
+}
 
-function closePanel(id){document.getElementById(id).style.display="none"}
+function closePanel(id){
+document.getElementById(id).style.display="none"
+}
+
+function safe(v){
+return v || "Not Set"
+}
 
 function createAccount(){
 
+let name=document.getElementById("name").value.trim()
+
+if(name===""){
+alert("Name required")
+return
+}
+
 let acc={
-name:name.value,
-job:job.value,
-cl:cl.value,
-national:national.value,
-card:card.value,
+name:name,
+job:document.getElementById("job").value,
+cl:document.getElementById("cl").value,
+national:document.getElementById("national").value,
+card:document.getElementById("card").value,
 balance:1000,
-pattern:pattern.value
+pattern:document.getElementById("pattern").value
 }
 
 accounts.push(acc)
 save()
 
-alert("Account created")
+alert("Account Created")
 
 }
 
+let currentAccount
+
 function transfer(){
 
-let to=accounts.find(a=>a.card==toCard.value)
-let from=currentAccount
+let to=accounts.find(a=>a.card==document.getElementById("toCard").value)
+
+if(!to){
+alert("Receiver not found")
+return
+}
 
 let amount=parseInt(document.getElementById("amount").value)
 
-if(from.balance!=Infinity) from.balance-=amount
-if(to.balance!=Infinity) to.balance+=amount
+if(currentAccount.balance!=Infinity)
+currentAccount.balance-=amount
+
+if(to.balance!=Infinity)
+to.balance+=amount
 
 save()
+showAccount(currentAccount)
 
-showAccount(from)
+}
+
+function showAccount(acc){
+
+showPanel("accountPanel")
+
+document.getElementById("cardName").innerText="Name : "+safe(acc.name)
+document.getElementById("cardJob").innerText="Job : "+safe(acc.job)
+document.getElementById("cardCL").innerText="CL : "+safe(acc.cl)
+document.getElementById("cardNational").innerText="National No : "+safe(acc.national)
+document.getElementById("cardNumber").innerText="Card No : "+safe(acc.card)
+document.getElementById("cardBalance").innerText="Balance : "+acc.balance
 
 }
 
@@ -229,7 +328,6 @@ video:{facingMode:"environment"}
 })
 
 video.srcObject=stream
-
 scanLoop()
 
 }
@@ -238,13 +336,14 @@ function scanLoop(){
 
 setTimeout(scanLoop,200)
 
+if(video.videoWidth==0) return
+
 canvas.width=video.videoWidth
 canvas.height=video.videoHeight
 
 ctx.drawImage(video,0,0)
 
 let y=canvas.height/2
-
 let digits=""
 
 for(let i=0;i<8;i++){
@@ -253,14 +352,16 @@ let x=(canvas.width/8)*i+(canvas.width/16)
 
 let pixel=ctx.getImageData(x,y,1,1).data
 
-if(pixel[2]>pixel[0]) digits+="1"
-else digits+="0"
+if(pixel[2]>pixel[0])
+digits+="1"
+else
+digits+="0"
 
 }
 
-scanOutput.innerText=digits
+document.getElementById("scanOutput").innerText="Reading : "+digits
 
-let card=loginCard.value
+let card=document.getElementById("loginCard").value
 
 let acc=accounts.find(a=>a.card==card && a.pattern==digits)
 
@@ -271,43 +372,37 @@ showAccount(acc)
 
 }
 
-let currentAccount
-
-function showAccount(acc){
-
-accountPanel.style.display="block"
-
-cardName.innerText="Name : "+acc.name
-cardJob.innerText="Job : "+acc.job
-cardCL.innerText="CL : "+acc.cl
-cardNational.innerText="National : "+acc.national
-cardNumber.innerText="Card : "+acc.card
-cardBalance.innerText="Balance : "+acc.balance
-
-}
-
 function adminLogin(){
 
-if(adminPin.value!="303786303") return alert("Wrong pin")
+if(document.getElementById("adminPin").value!="303786303"){
+alert("Wrong Pin")
+return
+}
 
 let html=""
 
 accounts.forEach((a,i)=>{
 
 html+=`
-<div>
-${a.name} - ${a.card}
-<button onclick="edit(${i})">Edit</button>
+<div class="adminCard">
+
+<b>${safe(a.name)}</b><br>
+Card : ${safe(a.card)}<br>
+Balance : ${a.balance}<br>
+
+<button onclick="editAccount(${i})">Edit</button>
+<button onclick="deleteAccount(${i})" style="background:red">Delete</button>
+
 </div>
 `
 
 })
 
-adminArea.innerHTML=html
+document.getElementById("adminArea").innerHTML=html
 
 }
 
-function edit(i){
+function editAccount(i){
 
 let a=accounts[i]
 
@@ -321,7 +416,22 @@ let pattern=prompt("Pattern",a.pattern)
 accounts[i]={...a,name,job,cl,national,card,pattern}
 
 save()
+adminLogin()
 
+}
+
+function deleteAccount(i){
+
+if(accounts[i].card=="99999999"){
+alert("Minister account cannot be deleted")
+return
+}
+
+if(!confirm("Delete this account?")) return
+
+accounts.splice(i,1)
+
+save()
 adminLogin()
 
 }
