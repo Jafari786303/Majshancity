@@ -1,336 +1,332 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html>
 <head>
 <meta charset="UTF-8">
-<title>National Digital Bank</title><style>
+<title>Mobile Bank</title>
 
+<style>
 body{
 font-family:Arial;
-background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+background:#0a0f1f;
 color:white;
 text-align:center;
 }
 
+.panel{
+background:#16213e;
+padding:20px;
+margin:20px;
+border-radius:10px;
+display:none;
+}
+
 button{
 padding:10px;
-margin:8px;
-border:none;
-border-radius:10px;
-background:#00c6ff;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
-input{
-padding:8px;
 margin:5px;
-border-radius:8px;
+background:#1f4068;
+color:white;
 border:none;
+border-radius:5px;
 }
 
-.panel{
-display:none;
-background:#111;
-padding:20px;
-margin:10px;
-border-radius:15px;
+.close{
+background:red;
+float:right;
 }
 
-.card{
-width:320px;
-margin:auto;
-background:linear-gradient(45deg,#111,#333);
-border-radius:15px;
-padding:20px;
-box-shadow:0 0 20px cyan;
+#video{
+width:100%;
+max-width:400px;
+border:3px solid white;
 }
 
-video{
-width:320px;
-border-radius:10px;
-}
-
-.scanBox{
-position:relative;
-width:320px;
-margin:auto;
-}
-
-.scanLine{
+#scanLine{
 position:absolute;
 width:100%;
-height:3px;
+height:2px;
 background:red;
 animation:scan 2s infinite;
 }
 
 @keyframes scan{
-0%{top:0}
-50%{top:100%}
-100%{top:0}
+0%{top:10%}
+50%{top:90%}
+100%{top:10%}
 }
 
-.reading{
-background:black;
-padding:5px;
+.card{
+width:300px;
+background:linear-gradient(135deg,#0f3460,#533483);
+padding:20px;
+border-radius:15px;
+margin:auto;
+}
+
+input{
+padding:8px;
 margin:5px;
 }
 
-</style></head><body><h1>National Digital Bank</h1><button onclick="openPanel('login')">Login</button>
-<button onclick="openPanel('create')">Create Account</button>
+</style>
+</head>
 
-<!-- LOGIN --><div id="login" class="panel"><button onclick="closePanel('login')">Close</button>
+<body>
 
-<h2>Login</h2><input id="cardInput" placeholder="Card Number"><br>
+<h2>Mobile Bank</h2>
 
-<button onclick="startCamera()">Start Scanner</button>
+<button onclick="showLogin()">Login</button>
+<button onclick="showCreate()">Create Account</button>
+<button onclick="showAdmin()">Admin</button>
 
-<div class="scanBox"><video id="camera" autoplay></video>
+<!-- LOGIN -->
+<div id="loginPanel" class="panel">
+<button class="close" onclick="closePanel('loginPanel')">X</button>
 
-<div class="scanLine"></div></div><canvas id="scanCanvas" width="320" height="240" style="display:none"></canvas>
+<h3>Login</h3>
 
-<div class="reading">
-Scanner Reading : <span id="scanResult">---</span>
-</div></div><!-- CREATE ACCOUNT --><div id="create" class="panel"><button onclick="closePanel('create')">Close</button>
+<input id="loginCard" placeholder="Card Number">
 
-<h2>Create Account</h2><input id="cname" placeholder="Name"><br>
-<input id="cjob" placeholder="Job"><br>
-<input id="ccl" placeholder="CL"><br>
-<input id="cnational" placeholder="National No"><br>
-<input id="ccard" placeholder="Card No"><br>
+<br>
 
-<input id="cpattern" maxlength="8" placeholder="8 Digit Pattern Code"><br>
+<button onclick="startScanner()">Start Scanner</button>
+
+<div style="position:relative">
+<video id="video" autoplay></video>
+<div id="scanLine"></div>
+</div>
+
+<p id="scanOutput"></p>
+
+</div>
+
+<!-- CREATE ACCOUNT -->
+
+<div id="createPanel" class="panel">
+<button class="close" onclick="closePanel('createPanel')">X</button>
+
+<h3>Create Account</h3>
+
+<input id="name" placeholder="Name"><br>
+<input id="job" placeholder="Job"><br>
+<input id="cl" placeholder="CL"><br>
+<input id="national" placeholder="National No"><br>
+<input id="card" placeholder="Card No"><br>
+<input id="pattern" placeholder="8 digit code"><br>
 
 <button onclick="createAccount()">Create</button>
 
-</div><!-- ACCOUNT --><div id="account" class="panel"><button onclick="closePanel('account')">Close</button>
+</div>
 
-<h2>Account</h2><div class="card"><p>Name : <span id="name"></span></p>
-<p>Job : <span id="job"></span></p>
-<p>CL : <span id="cl"></span></p>
-<p>National : <span id="national"></span></p>
-<p>Card : <span id="cardno"></span></p>
-<p>Balance : <span id="balance"></span></p></div><h3>Transfer Money</h3><input id="toCard" placeholder="Receiver Card"><br>
-<input id="amountInput" placeholder="Amount"><br>
+<!-- ACCOUNT -->
+
+<div id="accountPanel" class="panel">
+<button class="close" onclick="closePanel('accountPanel')">X</button>
+
+<div class="card">
+
+<p id="cardName"></p>
+<p id="cardJob"></p>
+<p id="cardCL"></p>
+<p id="cardNational"></p>
+<p id="cardNumber"></p>
+<p id="cardBalance"></p>
+
+</div>
+
+<h3>Transfer</h3>
+
+<input id="toCard" placeholder="To Card">
+<input id="amount" placeholder="Amount">
 
 <button onclick="transfer()">Send</button>
 
-</div><!-- ADMIN --><div><h2>Admin</h2><input id="pin" placeholder="Admin PIN">
-<button onclick="adminLogin()">Open</button></div><div id="admin" class="panel"><button onclick="closePanel('admin')">Close</button>
+</div>
 
-<h2>Admin Panel</h2><div id="accounts"></div></div><script>
+<!-- ADMIN -->
 
-let video=document.getElementById("camera")
-let scanText=document.getElementById("scanResult")
-let canvas=document.getElementById("scanCanvas")
-let ctx=canvas.getContext("2d")
-let current=null
+<div id="adminPanel" class="panel">
+<button class="close" onclick="closePanel('adminPanel')">X</button>
 
-if(!localStorage.accounts){
+<h3>Admin Login</h3>
 
-let data={}
+<input id="adminPin" placeholder="PIN">
+<button onclick="adminLogin()">Enter</button>
 
-data["0001"]={
+<div id="adminArea"></div>
+
+</div>
+
+<script>
+
+let accounts = JSON.parse(localStorage.getItem("bankAccounts")) || []
+
+if(!accounts.find(a=>a.card=="99999999")){
+accounts.push({
 name:"City Minister",
 job:"Minister",
 cl:"VIP",
-national:"000000",
-card:"0001",
-balance:"Infinity",
+national:"0000",
+card:"99999999",
+balance:Infinity,
 pattern:"11111111"
-}
-
-localStorage.accounts=JSON.stringify(data)
-
-}
-
-function openPanel(id){
-document.getElementById(id).style.display="block"
-}
-
-function closePanel(id){
-document.getElementById(id).style.display="none"
-}
-
-function startCamera(){
-
-navigator.mediaDevices.getUserMedia({
-video:{facingMode:"environment"}
 })
-
-.then(stream=>{
-video.srcObject=stream
-scanLoop()
-})
-
+save()
 }
 
-function scanLoop(){
-
-setInterval(()=>{
-
-ctx.drawImage(video,0,0,320,240)
-
-let imageData=ctx.getImageData(0,120,320,1)
-
-let detected=readCenter(imageData)
-
-scanText.innerText=detected
-
-let card=document.getElementById("cardInput").value
-let accounts=JSON.parse(localStorage.accounts)
-
-if(accounts[card]){
-
-if(accounts[card].pattern==detected){
-
-login(card)
-
+function save(){
+localStorage.setItem("bankAccounts",JSON.stringify(accounts))
 }
 
-}
+function showLogin(){document.getElementById("loginPanel").style.display="block"}
+function showCreate(){document.getElementById("createPanel").style.display="block"}
+function showAdmin(){document.getElementById("adminPanel").style.display="block"}
 
-},500)
-
-}
-
-function readCenter(imageData){
-
-let digits=""
-
-for(let i=0;i<8;i++){
-
-digits+=Math.random()>0.5?"1":"0"
-
-}
-
-return digits
-
-}
-
-function login(card){
-
-let acc=JSON.parse(localStorage.accounts)[card]
-
-current=card
-
-openPanel("account")
-closePanel("login")
-
-name.innerText=acc.name
-job.innerText=acc.job
-cl.innerText=acc.cl
-national.innerText=acc.national
-cardno.innerText=acc.card
-balance.innerText=acc.balance
-
-}
+function closePanel(id){document.getElementById(id).style.display="none"}
 
 function createAccount(){
 
-if(cpattern.value.length!=8){
-alert("Pattern must be exactly 8 digits")
-return
+let acc={
+name:name.value,
+job:job.value,
+cl:cl.value,
+national:national.value,
+card:card.value,
+balance:1000,
+pattern:pattern.value
 }
 
-let data=JSON.parse(localStorage.accounts)
+accounts.push(acc)
+save()
 
-let card=ccard.value
-
-data[card]={
-
-name:cname.value,
-job:cjob.value,
-cl:ccl.value,
-national:cnational.value,
-card:card,
-balance:0,
-pattern:cpattern.value
-
-}
-
-localStorage.accounts=JSON.stringify(data)
-
-alert("Account Created")
+alert("Account created")
 
 }
 
 function transfer(){
 
-let to=toCard.value
-let amount=parseInt(amountInput.value)
+let to=accounts.find(a=>a.card==toCard.value)
+let from=currentAccount
 
-let data=JSON.parse(localStorage.accounts)
+let amount=parseInt(document.getElementById("amount").value)
 
-if(data[current].balance!="Infinity")
-data[current].balance-=amount
+if(from.balance!=Infinity) from.balance-=amount
+if(to.balance!=Infinity) to.balance+=amount
 
-if(data[to].balance!="Infinity")
-data[to].balance+=amount
+save()
 
-localStorage.accounts=JSON.stringify(data)
+showAccount(from)
 
-alert("Transfer Successful")
+}
+
+let video=document.getElementById("video")
+let canvas=document.createElement("canvas")
+let ctx=canvas.getContext("2d")
+
+async function startScanner(){
+
+let stream=await navigator.mediaDevices.getUserMedia({
+video:{facingMode:"environment"}
+})
+
+video.srcObject=stream
+
+scanLoop()
+
+}
+
+function scanLoop(){
+
+setTimeout(scanLoop,200)
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+ctx.drawImage(video,0,0)
+
+let y=canvas.height/2
+
+let digits=""
+
+for(let i=0;i<8;i++){
+
+let x=(canvas.width/8)*i+(canvas.width/16)
+
+let pixel=ctx.getImageData(x,y,1,1).data
+
+if(pixel[2]>pixel[0]) digits+="1"
+else digits+="0"
+
+}
+
+scanOutput.innerText=digits
+
+let card=loginCard.value
+
+let acc=accounts.find(a=>a.card==card && a.pattern==digits)
+
+if(acc){
+currentAccount=acc
+showAccount(acc)
+}
+
+}
+
+let currentAccount
+
+function showAccount(acc){
+
+accountPanel.style.display="block"
+
+cardName.innerText="Name : "+acc.name
+cardJob.innerText="Job : "+acc.job
+cardCL.innerText="CL : "+acc.cl
+cardNational.innerText="National : "+acc.national
+cardNumber.innerText="Card : "+acc.card
+cardBalance.innerText="Balance : "+acc.balance
 
 }
 
 function adminLogin(){
 
-if(pin.value=="303786303"){
-
-openPanel("admin")
-showAccounts()
-
-}
-
-}
-
-function showAccounts(){
-
-let data=JSON.parse(localStorage.accounts)
+if(adminPin.value!="303786303") return alert("Wrong pin")
 
 let html=""
 
-for(let card in data){
-
-let a=data[card]
+accounts.forEach((a,i)=>{
 
 html+=`
-
-<div class="card">
-
-Name:<input value="${a.name}" onchange="edit('${card}','name',this.value)"><br>
-Job:<input value="${a.job}" onchange="edit('${card}','job',this.value)"><br>
-CL:<input value="${a.cl}" onchange="edit('${card}','cl',this.value)"><br>
-National:<input value="${a.national}" onchange="edit('${card}','national',this.value)"><br>
-Card:<input value="${a.card}" onchange="edit('${card}','card',this.value)"><br>
-Balance:<input value="${a.balance}" onchange="edit('${card}','balance',this.value)"><br>
-Pattern:<input maxlength="8" value="${a.pattern}" onchange="edit('${card}','pattern',this.value)"><br>
-
+<div>
+${a.name} - ${a.card}
+<button onclick="edit(${i})">Edit</button>
 </div>
-
 `
 
-}
+})
 
-accounts.innerHTML=html
-
-}
-
-function edit(card,key,val){
-
-let data=JSON.parse(localStorage.accounts)
-
-if(key=="pattern" && val.length!=8){
-alert("Pattern must be 8 digits")
-return
-}
-
-data[card][key]=val
-
-localStorage.accounts=JSON.stringify(data)
+adminArea.innerHTML=html
 
 }
 
-</script></body>
+function edit(i){
+
+let a=accounts[i]
+
+let name=prompt("Name",a.name)
+let job=prompt("Job",a.job)
+let cl=prompt("CL",a.cl)
+let national=prompt("National",a.national)
+let card=prompt("Card",a.card)
+let pattern=prompt("Pattern",a.pattern)
+
+accounts[i]={...a,name,job,cl,national,card,pattern}
+
+save()
+
+adminLogin()
+
+}
+
+</script>
+
+</body>
 </html>
