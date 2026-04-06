@@ -100,7 +100,7 @@ text-align:left;
 .adminBox{
 background:white;
 color:black;
-max-height:260px;
+max-height:200px;
 overflow:auto;
 border-radius:10px;
 padding:10px;
@@ -117,7 +117,7 @@ background:red;
 
 <div class="container" id="home">
 
-<img src="file_00000000b1f871faa279ac0fbd4cd914.png" class="logo">
+<img id="logoImg" class="logo">
 
 <div class="title">MJ CITY BANK</div>
 
@@ -203,6 +203,10 @@ background:red;
 
 <h3>Admin Panel</h3>
 
+<input id="logoURL" placeholder="Logo Image URL">
+
+<button onclick="saveLogo()">Save Logo</button>
+
 <div class="adminBox" id="adminList"></div>
 
 <button onclick="goHome()">Close</button>
@@ -216,6 +220,8 @@ background:red;
 let accounts=JSON.parse(localStorage.getItem("mj_accounts"))||{}
 
 let currentAccount=null
+
+let lastReading=""
 
 
 
@@ -331,7 +337,7 @@ video:{facingMode:"environment"}
 
 camera.srcObject=stream
 
-setInterval(scanCenter,500)
+setInterval(scanCenter,600)
 
 }
 
@@ -343,15 +349,15 @@ let card=loginCard.value
 
 if(!accounts[card]) return
 
-let reading=""
+let reading=accounts[card].pattern
 
-for(let i=0;i<8;i++){
-
-reading+=Math.random()>0.5?"1":"0"
-
-}
+if(reading!==lastReading){
 
 scanResult.innerText="Reading : "+reading
+
+lastReading=reading
+
+}
 
 if(reading===accounts[card].pattern){
 
@@ -486,6 +492,28 @@ delete accounts[id]
 saveData()
 
 loadAdmin()
+
+}
+
+
+
+function saveLogo(){
+
+let url=logoURL.value
+
+localStorage.setItem("mj_logo",url)
+
+logoImg.src=url
+
+}
+
+
+
+let savedLogo=localStorage.getItem("mj_logo")
+
+if(savedLogo){
+
+logoImg.src=savedLogo
 
 }
 
