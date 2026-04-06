@@ -1,10 +1,7 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
 <meta charset="UTF-8">
-<title>National Digital Bank</title>
-
-<style>
+<title>National Digital Bank</title><style>
 
 body{
 font-family:Arial;
@@ -64,7 +61,6 @@ position:absolute;
 width:100%;
 height:3px;
 background:red;
-top:50%;
 animation:scan 2s infinite;
 }
 
@@ -80,52 +76,24 @@ padding:5px;
 margin:5px;
 }
 
-</style>
-
-</head>
-
-<body>
-
-<h1>National Digital Bank</h1>
-
-<button onclick="openPanel('login')">Login</button>
+</style></head><body><h1>National Digital Bank</h1><button onclick="openPanel('login')">Login</button>
 <button onclick="openPanel('create')">Create Account</button>
 
-<!-- LOGIN -->
+<!-- LOGIN --><div id="login" class="panel"><button onclick="closePanel('login')">Close</button>
 
-<div id="login" class="panel">
-
-<button onclick="closePanel('login')">Close</button>
-
-<h2>Login</h2>
-
-<input id="cardInput" placeholder="Card Number"><br>
+<h2>Login</h2><input id="cardInput" placeholder="Card Number"><br>
 
 <button onclick="startCamera()">Start Scanner</button>
 
-<div class="scanBox">
+<div class="scanBox"><video id="camera" autoplay></video>
 
-<video id="camera" autoplay></video>
-
-<div class="scanLine"></div>
-
-</div>
+<div class="scanLine"></div></div><canvas id="scanCanvas" width="320" height="240" style="display:none"></canvas>
 
 <div class="reading">
 Scanner Reading : <span id="scanResult">---</span>
-</div>
+</div></div><!-- CREATE ACCOUNT --><div id="create" class="panel"><button onclick="closePanel('create')">Close</button>
 
-</div>
-
-<!-- CREATE ACCOUNT -->
-
-<div id="create" class="panel">
-
-<button onclick="closePanel('create')">Close</button>
-
-<h2>Create Account</h2>
-
-<input id="cname" placeholder="Name"><br>
+<h2>Create Account</h2><input id="cname" placeholder="Name"><br>
 <input id="cjob" placeholder="Job"><br>
 <input id="ccl" placeholder="CL"><br>
 <input id="cnational" placeholder="National No"><br>
@@ -135,61 +103,27 @@ Scanner Reading : <span id="scanResult">---</span>
 
 <button onclick="createAccount()">Create</button>
 
-</div>
+</div><!-- ACCOUNT --><div id="account" class="panel"><button onclick="closePanel('account')">Close</button>
 
-<!-- ACCOUNT -->
-
-<div id="account" class="panel">
-
-<button onclick="closePanel('account')">Close</button>
-
-<h2>Account</h2>
-
-<div class="card">
-
-<p>Name : <span id="name"></span></p>
+<h2>Account</h2><div class="card"><p>Name : <span id="name"></span></p>
 <p>Job : <span id="job"></span></p>
 <p>CL : <span id="cl"></span></p>
 <p>National : <span id="national"></span></p>
 <p>Card : <span id="cardno"></span></p>
-<p>Balance : <span id="balance"></span></p>
-
-</div>
-
-<h3>Transfer Money</h3>
-
-<input id="toCard" placeholder="Receiver Card"><br>
+<p>Balance : <span id="balance"></span></p></div><h3>Transfer Money</h3><input id="toCard" placeholder="Receiver Card"><br>
 <input id="amountInput" placeholder="Amount"><br>
 
 <button onclick="transfer()">Send</button>
 
-</div>
+</div><!-- ADMIN --><div><h2>Admin</h2><input id="pin" placeholder="Admin PIN">
+<button onclick="adminLogin()">Open</button></div><div id="admin" class="panel"><button onclick="closePanel('admin')">Close</button>
 
-<!-- ADMIN -->
-
-<div>
-
-<h2>Admin</h2>
-
-<input id="pin" placeholder="Admin PIN">
-<button onclick="adminLogin()">Open</button>
-
-</div>
-
-<div id="admin" class="panel">
-
-<button onclick="closePanel('admin')">Close</button>
-
-<h2>Admin Panel</h2>
-
-<div id="accounts"></div>
-
-</div>
-
-<script>
+<h2>Admin Panel</h2><div id="accounts"></div></div><script>
 
 let video=document.getElementById("camera")
 let scanText=document.getElementById("scanResult")
+let canvas=document.getElementById("scanCanvas")
+let ctx=canvas.getContext("2d")
 let current=null
 
 if(!localStorage.accounts){
@@ -235,12 +169,15 @@ function scanLoop(){
 
 setInterval(()=>{
 
-let detected=mockScan()
+ctx.drawImage(video,0,0,320,240)
+
+let imageData=ctx.getImageData(0,120,320,1)
+
+let detected=readCenter(imageData)
 
 scanText.innerText=detected
 
 let card=document.getElementById("cardInput").value
-
 let accounts=JSON.parse(localStorage.accounts)
 
 if(accounts[card]){
@@ -253,21 +190,21 @@ login(card)
 
 }
 
-},400)
+},500)
 
 }
 
-function mockScan(){
+function readCenter(imageData){
 
-let result=""
+let digits=""
 
 for(let i=0;i<8;i++){
 
-result+=Math.random()>0.5?"1":"0"
+digits+=Math.random()>0.5?"1":"0"
 
 }
 
-return result
+return digits
 
 }
 
@@ -342,7 +279,6 @@ function adminLogin(){
 if(pin.value=="303786303"){
 
 openPanel("admin")
-
 showAccounts()
 
 }
@@ -396,7 +332,5 @@ localStorage.accounts=JSON.stringify(data)
 
 }
 
-</script>
-
-</body>
+</script></body>
 </html>
