@@ -82,6 +82,21 @@ background:red;
 animation:scan 2s infinite linear;
 }
 
+/* CENTER ALIGNMENT BOX */
+
+.scanBox{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:160px;
+height:40px;
+border:3px solid #00ff9c;
+border-radius:6px;
+box-shadow:0 0 10px #00ff9c;
+pointer-events:none;
+}
+
 @keyframes scan{
 0%{top:10%}
 50%{top:90%}
@@ -132,6 +147,8 @@ display:none;
 
 </div>
 
+
+
 <div class="container" id="login" style="display:none">
 
 <h3>Login</h3>
@@ -143,6 +160,7 @@ display:none;
 <div class="scanArea">
 <video id="camera" autoplay></video>
 <div class="scanLine"></div>
+<div class="scanBox"></div>
 </div>
 
 <div id="scanResult"></div>
@@ -150,6 +168,8 @@ display:none;
 <button class="closeBtn" onclick="goHome()">Close</button>
 
 </div>
+
+
 
 <div class="container" id="create" style="display:none">
 
@@ -168,6 +188,8 @@ display:none;
 
 </div>
 
+
+
 <div class="container" id="account" style="display:none">
 
 <h3>Your Card</h3>
@@ -183,6 +205,8 @@ display:none;
 
 </div>
 
+
+
 <div class="container" id="admin" style="display:none">
 
 <h3>Admin Panel</h3>
@@ -196,7 +220,11 @@ display:none;
 
 </div>
 
+
+
 <canvas id="scanCanvas"></canvas>
+
+
 
 <script>
 
@@ -277,6 +305,7 @@ pattern:pattern.value
 }
 
 saveData()
+
 alert("Account Created")
 
 }
@@ -307,7 +336,7 @@ ctx.drawImage(camera,0,0)
 let centerY = canvas.height/2
 let startX = canvas.width/2 - 80
 
-let reading = ""
+let reading=""
 
 for(let i=0;i<8;i++){
 
@@ -318,21 +347,22 @@ let pixel = ctx.getImageData(x,centerY,1,1).data
 let brightness = (pixel[0]+pixel[1]+pixel[2])/3
 
 if(brightness < 120){
-reading += "1"
+reading+="1"
 }else{
-reading += "0"
+reading+="0"
 }
 
 }
 
-scanResult.innerText = "Reading : "+reading
+scanResult.innerText="Reading : "+reading
 
-let card = loginCard.value
+let card=loginCard.value
 
-if(accounts[card] && reading === accounts[card].pattern){
+if(accounts[card] && reading===accounts[card].pattern){
 
 scanning=false
 clearInterval(scanTimer)
+
 loginAccount(card)
 
 }
@@ -398,19 +428,25 @@ for(let id in accounts){
 
 let a=accounts[id]
 
-html += `
+html+=`
+
 <div>
+
 <b>${a.name}</b> (${a.card})<br>
 Balance : ${a.balance}<br>
+
 <button onclick="editAccount('${id}')">Edit</button>
 <button onclick="deleteAccount('${id}')">Delete</button>
+
 <hr>
+
 </div>
+
 `
 
 }
 
-adminList.innerHTML = html
+adminList.innerHTML=html
 
 }
 
