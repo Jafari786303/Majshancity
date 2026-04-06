@@ -109,6 +109,10 @@ padding:10px;
 background:red;
 }
 
+canvas{
+display:none;
+}
+
 </style>
 </head>
 
@@ -127,8 +131,6 @@ background:red;
 <button onclick="openAdmin()">Admin Panel</button>
 
 </div>
-
-
 
 <div class="container" id="login" style="display:none">
 
@@ -149,8 +151,6 @@ background:red;
 
 </div>
 
-
-
 <div class="container" id="create" style="display:none">
 
 <h3>Create Account</h3>
@@ -168,8 +168,6 @@ background:red;
 
 </div>
 
-
-
 <div class="container" id="account" style="display:none">
 
 <h3>Your Card</h3>
@@ -185,8 +183,6 @@ background:red;
 
 </div>
 
-
-
 <div class="container" id="admin" style="display:none">
 
 <h3>Admin Panel</h3>
@@ -200,7 +196,7 @@ background:red;
 
 </div>
 
-
+<canvas id="scanCanvas"></canvas>
 
 <script>
 
@@ -208,8 +204,10 @@ let accounts = JSON.parse(localStorage.getItem("mj_accounts")) || {}
 
 let currentAccount = null
 let scanning = false
-let scanProgress = 0
 let scanTimer = null
+
+const canvas = document.getElementById("scanCanvas")
+const ctx = canvas.getContext("2d")
 
 if(!accounts["0000"]){
 
@@ -269,7 +267,6 @@ function createAccount(){
 let c = card.value
 
 accounts[c]={
-
 name:name.value,
 job:job.value,
 cl:cl.value,
@@ -277,11 +274,9 @@ nation:nation.value,
 card:c,
 balance:0,
 pattern:pattern.value
-
 }
 
 saveData()
-
 alert("Account Created")
 
 }
@@ -295,10 +290,8 @@ video:{facingMode:"environment"}
 camera.srcObject = stream
 
 scanning = true
-scanProgress = 0
 
-clearInterval(scanTimer)
-scanTimer = setInterval(scanCenter,120)
+scanTimer = setInterval(scanCenter,150)
 
 }
 
@@ -306,31 +299,40 @@ function scanCenter(){
 
 if(!scanning) return
 
-let card = loginCard.value
-if(!accounts[card]) return
+canvas.width = camera.videoWidth
+canvas.height = camera.videoHeight
 
-let pattern = accounts[card].pattern
+ctx.drawImage(camera,0,0)
+
+let centerY = canvas.height/2
+let startX = canvas.width/2 - 80
+
 let reading = ""
 
 for(let i=0;i<8;i++){
 
-if(i < scanProgress){
-reading += pattern[i]
+let x = startX + i*20
+
+let pixel = ctx.getImageData(x,centerY,1,1).data
+
+let brightness = (pixel[0]+pixel[1]+pixel[2])/3
+
+if(brightness < 120){
+reading += "1"
 }else{
-reading += Math.random()>0.5 ? "1":"0"
+reading += "0"
 }
 
 }
 
-scanResult.innerText = "Reading : " + reading
+scanResult.innerText = "Reading : "+reading
 
-scanProgress++
+let card = loginCard.value
 
-if(scanProgress > 8){
+if(accounts[card] && reading === accounts[card].pattern){
 
-scanning = false
+scanning=false
 clearInterval(scanTimer)
-
 loginAccount(card)
 
 }
@@ -397,19 +399,13 @@ for(let id in accounts){
 let a=accounts[id]
 
 html += `
-
 <div>
-
 <b>${a.name}</b> (${a.card})<br>
 Balance : ${a.balance}<br>
-
 <button onclick="editAccount('${id}')">Edit</button>
 <button onclick="deleteAccount('${id}')">Delete</button>
-
 <hr>
-
 </div>
-
 `
 
 }
