@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>MJ City Bank</title>
 
 <style>
@@ -124,9 +123,7 @@ background:red;
 <div class="tag">Secure • Smart • Educational Banking</div>
 
 <button onclick="openLogin()">Login</button>
-
 <button onclick="openCreate()">Create Account</button>
-
 <button onclick="openAdmin()">Admin Panel</button>
 
 </div>
@@ -142,11 +139,8 @@ background:red;
 <button onclick="startScanner()">Start Scanner</button>
 
 <div class="scanArea">
-
 <video id="camera" autoplay></video>
-
 <div class="scanLine"></div>
-
 </div>
 
 <div id="scanResult"></div>
@@ -162,15 +156,10 @@ background:red;
 <h3>Create Account</h3>
 
 <input id="name" placeholder="Name">
-
 <input id="job" placeholder="Job">
-
 <input id="cl" placeholder="CL">
-
 <input id="nation" placeholder="National No">
-
 <input id="card" placeholder="Card No">
-
 <input id="pattern" placeholder="Pattern (8 digits 0/1)">
 
 <button onclick="createAccount()">Create</button>
@@ -188,7 +177,6 @@ background:red;
 <div id="cardUI" class="card"></div>
 
 <input id="sendCard" placeholder="Send To Card">
-
 <input id="sendAmount" placeholder="Amount">
 
 <button onclick="sendMoney()">Send Money</button>
@@ -204,7 +192,6 @@ background:red;
 <h3>Admin Panel</h3>
 
 <input id="logoURL" placeholder="Logo Image URL">
-
 <button onclick="saveLogo()">Save Logo</button>
 
 <div class="adminBox" id="adminList"></div>
@@ -217,11 +204,11 @@ background:red;
 
 <script>
 
-let accounts=JSON.parse(localStorage.getItem("mj_accounts"))||{}
+let accounts = JSON.parse(localStorage.getItem("mj_accounts")) || {}
 
-let currentAccount=null
+let currentAccount = null
 
-let lastReading=""
+let stableReading = ""
 
 
 
@@ -242,59 +229,48 @@ pattern:"11111111"
 
 
 function saveData(){
-
 localStorage.setItem("mj_accounts",JSON.stringify(accounts))
-
 }
 
 
 
 function hideAll(){
-
 home.style.display="none"
 login.style.display="none"
 create.style.display="none"
 account.style.display="none"
 admin.style.display="none"
-
 }
 
 
 
 function goHome(){
-
 location.reload()
-
 }
 
 
 
 function openLogin(){
-
 hideAll()
 login.style.display="block"
-
 }
 
 
 
 function openCreate(){
-
 hideAll()
 create.style.display="block"
-
 }
 
 
 
 function openAdmin(){
 
-let pin=prompt("Enter Admin Pin")
+let pin = prompt("Enter Admin Pin")
 
 if(pin!="303786303") return
 
 hideAll()
-
 admin.style.display="block"
 
 loadAdmin()
@@ -305,7 +281,7 @@ loadAdmin()
 
 function createAccount(){
 
-let c=card.value
+let c = card.value
 
 accounts[c]={
 
@@ -329,13 +305,13 @@ alert("Account Created")
 
 async function startScanner(){
 
-let stream=await navigator.mediaDevices.getUserMedia({
+stableReading = ""
 
+let stream = await navigator.mediaDevices.getUserMedia({
 video:{facingMode:"environment"}
-
 })
 
-camera.srcObject=stream
+camera.srcObject = stream
 
 setInterval(scanCenter,600)
 
@@ -345,24 +321,26 @@ setInterval(scanCenter,600)
 
 function scanCenter(){
 
-let card=loginCard.value
+let card = loginCard.value
 
 if(!accounts[card]) return
 
-let reading=accounts[card].pattern
+if(stableReading === ""){
 
-if(reading!==lastReading){
+let r=""
 
-scanResult.innerText="Reading : "+reading
+for(let i=0;i<8;i++){
+r += Math.random()>0.5 ? "1" : "0"
+}
 
-lastReading=reading
+stableReading = r
 
 }
 
-if(reading===accounts[card].pattern){
+scanResult.innerText = "Reading : " + stableReading
 
+if(stableReading === accounts[card].pattern){
 loginAccount(card)
-
 }
 
 }
@@ -371,7 +349,7 @@ loginAccount(card)
 
 function loginAccount(card){
 
-currentAccount=accounts[card]
+currentAccount = accounts[card]
 
 hideAll()
 
@@ -385,14 +363,14 @@ displayCard()
 
 function displayCard(){
 
-cardUI.innerHTML=
+cardUI.innerHTML =
 
 `
-Name : ${currentAccount.name} <br>
-Job : ${currentAccount.job} <br>
-CL : ${currentAccount.cl} <br>
-National No : ${currentAccount.nation} <br>
-Card No : ${currentAccount.card} <br>
+Name : ${currentAccount.name}<br>
+Job : ${currentAccount.job}<br>
+CL : ${currentAccount.cl}<br>
+National No : ${currentAccount.nation}<br>
+Card No : ${currentAccount.card}<br>
 Balance : ${currentAccount.balance}
 `
 
@@ -402,28 +380,21 @@ Balance : ${currentAccount.balance}
 
 function sendMoney(){
 
-let to=sendCard.value
-let amount=parseInt(sendAmount.value)
+let to = sendCard.value
+let amount = parseInt(sendAmount.value)
 
 if(!accounts[to]){
-
 alert("Account not found")
-
 return
-
 }
 
-if(currentAccount.balance<amount){
-
+if(currentAccount.balance < amount){
 alert("Not enough balance")
-
 return
-
 }
 
-currentAccount.balance-=amount
-
-accounts[to].balance+=amount
+currentAccount.balance -= amount
+accounts[to].balance += amount
 
 saveData()
 
@@ -441,16 +412,14 @@ for(let id in accounts){
 
 let a=accounts[id]
 
-html+=`
+html += `
 
 <div>
 
-<b>${a.name}</b> (${a.card}) <br>
-
-Balance : ${a.balance} <br>
+<b>${a.name}</b> (${a.card})<br>
+Balance : ${a.balance}<br>
 
 <button onclick="editAccount('${id}')">Edit</button>
-
 <button onclick="deleteAccount('${id}')">Delete</button>
 
 <hr>
@@ -461,7 +430,7 @@ Balance : ${a.balance} <br>
 
 }
 
-adminList.innerHTML=html
+adminList.innerHTML = html
 
 }
 
@@ -469,13 +438,11 @@ adminList.innerHTML=html
 
 function editAccount(id){
 
-let n=prompt("Name",accounts[id].name)
+let n = prompt("Name",accounts[id].name)
+let p = prompt("Pattern",accounts[id].pattern)
 
-let p=prompt("Pattern",accounts[id].pattern)
-
-accounts[id].name=n
-
-accounts[id].pattern=p
+accounts[id].name = n
+accounts[id].pattern = p
 
 saveData()
 
@@ -499,22 +466,20 @@ loadAdmin()
 
 function saveLogo(){
 
-let url=logoURL.value
+let url = logoURL.value
 
 localStorage.setItem("mj_logo",url)
 
-logoImg.src=url
+logoImg.src = url
 
 }
 
 
 
-let savedLogo=localStorage.getItem("mj_logo")
+let savedLogo = localStorage.getItem("mj_logo")
 
 if(savedLogo){
-
-logoImg.src=savedLogo
-
+logoImg.src = savedLogo
 }
 
 </script>
