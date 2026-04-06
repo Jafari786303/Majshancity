@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>National Digital Bank</title>
+<title>Digital Bank</title>
 
 <style>
 
@@ -15,7 +15,7 @@ text-align:center;
 
 button{
 padding:10px;
-margin:10px;
+margin:8px;
 border:none;
 border-radius:10px;
 background:#00c6ff;
@@ -33,6 +33,10 @@ border:none;
 
 .panel{
 display:none;
+background:#111;
+padding:20px;
+margin:10px;
+border-radius:15px;
 }
 
 .card{
@@ -45,35 +49,79 @@ box-shadow:0 0 20px cyan;
 }
 
 video{
-width:300px;
+width:320px;
 border-radius:10px;
 }
 
+.scanBox{
+position:relative;
+width:320px;
+margin:auto;
+}
+
+.scanLine{
+position:absolute;
+width:100%;
+height:3px;
+background:red;
+top:50%;
+animation:scan 2s infinite;
+}
+
+@keyframes scan{
+0%{top:0}
+50%{top:100%}
+100%{top:0}
+}
+
+.reading{
+background:black;
+padding:5px;
+margin:5px;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <h1>National Digital Bank</h1>
 
-<button onclick="showLogin()">Login</button>
-<button onclick="showCreate()">Create Account</button>
+<button onclick="openPanel('login')">Login</button>
+<button onclick="openPanel('create')">Create Account</button>
 
-<div id="loginPanel" class="panel">
+<!-- LOGIN -->
+
+<div id="login" class="panel">
+
+<button onclick="closePanel('login')">Close</button>
 
 <h2>Login</h2>
 
-<input id="cardInput" placeholder="Enter Card Number"><br>
+<input id="cardInput" placeholder="Card Number"><br>
 
 <button onclick="startCamera()">Start Scanner</button>
 
-<br><br>
+<div class="scanBox">
 
 <video id="camera" autoplay></video>
 
+<div class="scanLine"></div>
+
 </div>
 
-<div id="createPanel" class="panel">
+<div class="reading">
+Scanner Reading : <span id="scanResult">---</span>
+</div>
+
+</div>
+
+<!-- CREATE ACCOUNT -->
+
+<div id="create" class="panel">
+
+<button onclick="closePanel('create')">Close</button>
 
 <h2>Create Account</h2>
 
@@ -82,24 +130,27 @@ border-radius:10px;
 <input id="ccl" placeholder="CL"><br>
 <input id="cnational" placeholder="National No"><br>
 <input id="ccard" placeholder="Card No"><br>
-
-<input id="cpattern" placeholder="Card Pattern Code (example: 010101)"><br>
+<input id="cpattern" placeholder="Pattern Code (example 010101)"><br>
 
 <button onclick="createAccount()">Create</button>
 
 </div>
 
-<div id="accountPanel" class="panel">
+<!-- ACCOUNT -->
 
-<h2>Your Account</h2>
+<div id="account" class="panel">
+
+<button onclick="closePanel('account')">Close</button>
+
+<h2>Account</h2>
 
 <div class="card">
 
 <p>Name : <span id="name"></span></p>
 <p>Job : <span id="job"></span></p>
 <p>CL : <span id="cl"></span></p>
-<p>National no : <span id="national"></span></p>
-<p>Card no : <span id="cardno"></span></p>
+<p>National : <span id="national"></span></p>
+<p>Card : <span id="cardno"></span></p>
 <p>Balance : <span id="balance"></span></p>
 
 </div>
@@ -107,11 +158,13 @@ border-radius:10px;
 <h3>Transfer Money</h3>
 
 <input id="toCard" placeholder="Receiver Card"><br>
-<input id="amount" placeholder="Amount"><br>
+<input id="amountInput" placeholder="Amount"><br>
 
 <button onclick="transfer()">Send</button>
 
 </div>
+
+<!-- ADMIN -->
 
 <div>
 
@@ -122,7 +175,9 @@ border-radius:10px;
 
 </div>
 
-<div id="adminPanel" class="panel">
+<div id="admin" class="panel">
+
+<button onclick="closePanel('admin')">Close</button>
 
 <h2>Admin Panel</h2>
 
@@ -134,6 +189,7 @@ border-radius:10px;
 
 let video=document.getElementById("camera")
 let current=null
+let scanText=document.getElementById("scanResult")
 
 if(!localStorage.accounts){
 
@@ -153,53 +209,50 @@ localStorage.accounts=JSON.stringify(data)
 
 }
 
-function showLogin(){
-document.getElementById("loginPanel").style.display="block"
-document.getElementById("createPanel").style.display="none"
+function openPanel(id){
+document.getElementById(id).style.display="block"
 }
 
-function showCreate(){
-document.getElementById("createPanel").style.display="block"
-document.getElementById("loginPanel").style.display="none"
+function closePanel(id){
+document.getElementById(id).style.display="none"
 }
 
 function startCamera(){
 
-navigator.mediaDevices.getUserMedia({video:true})
+navigator.mediaDevices.getUserMedia({
+video:{facingMode:"environment"}
+})
 
 .then(stream=>{
-
 video.srcObject=stream
-
-scan()
-
+scanLoop()
 })
 
 }
 
-function scan(){
+function scanLoop(){
 
 setInterval(()=>{
 
-let entered=document.getElementById("cardInput").value
+let detected=mockScan()
+
+scanText.innerText=detected
+
+let card=document.getElementById("cardInput").value
 
 let accounts=JSON.parse(localStorage.accounts)
 
-if(accounts[entered]){
+if(accounts[card]){
 
-let pattern=accounts[entered].pattern
+if(accounts[card].pattern==detected){
 
-let detected=mockScan()
-
-if(pattern==detected){
-
-login(entered)
+login(card)
 
 }
 
 }
 
-},400)
+},500)
 
 }
 
@@ -217,8 +270,8 @@ let acc=JSON.parse(localStorage.accounts)[card]
 
 current=card
 
-document.getElementById("loginPanel").style.display="none"
-document.getElementById("accountPanel").style.display="block"
+openPanel("account")
+closePanel("login")
 
 name.innerText=acc.name
 job.innerText=acc.job
@@ -233,7 +286,7 @@ function createAccount(){
 
 let data=JSON.parse(localStorage.accounts)
 
-let card=document.getElementById("ccard").value
+let card=ccard.value
 
 data[card]={
 
@@ -256,7 +309,7 @@ alert("Account Created")
 function transfer(){
 
 let to=toCard.value
-let amount=parseInt(amount.value)
+let amount=parseInt(amountInput.value)
 
 let data=JSON.parse(localStorage.accounts)
 
@@ -276,8 +329,7 @@ function adminLogin(){
 
 if(pin.value=="303786303"){
 
-document.getElementById("adminPanel").style.display="block"
-
+openPanel("admin")
 showAccounts()
 
 }
