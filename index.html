@@ -10,75 +10,47 @@
 body{
 margin:0;
 font-family:Arial;
-background:#0f3d2e;
+background:#0f2f1f;
 color:white;
 text-align:center;
-overflow:hidden;
 }
 
-#container{
-width:100%;
-height:100vh;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-}
-
-.card{
-background:#145c3f;
+.page{
+display:none;
 padding:20px;
-border-radius:15px;
-box-shadow:0 0 15px black;
-width:90%;
-max-width:350px;
+}
+
+.active{
+display:block;
 }
 
 button{
-padding:10px;
+padding:12px;
+margin:8px;
 border:none;
 border-radius:10px;
-background:#1fa463;
+background:#2ecc71;
 color:white;
 font-size:16px;
-margin-top:10px;
-width:100%;
 }
 
 input{
-width:95%;
 padding:10px;
-border-radius:10px;
+margin:6px;
+border-radius:8px;
 border:none;
-margin-top:10px;
+width:80%;
 }
 
 #scannerBox{
-margin-top:20px;
-border:3px solid #1fa463;
-width:220px;
-height:220px;
-position:relative;
-}
-
-#line{
-position:absolute;
-width:100%;
-height:3px;
-background:red;
-top:0;
-animation:scan 2s infinite linear;
-}
-
-@keyframes scan{
-0%{top:0}
-100%{top:100%}
-}
-
-#reading{
-margin-top:10px;
-font-size:18px;
-color:#8cffb8;
+width:200px;
+height:200px;
+border:4px solid #2ecc71;
+margin:auto;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:22px;
 }
 
 </style>
@@ -86,79 +58,162 @@ color:#8cffb8;
 
 <body>
 
-<div id="container">
+<!-- HOME PAGE -->
 
-<div class="card" id="loginPage">
+<div id="home" class="page active">
 
-<h2>MJ City Bank</h2>
+<h1>MJ City Bank</h1>
 
-<input id="cardInput" placeholder="Enter Card Number">
+<p>Education • City Development • Secure Banking</p>
+
+<button onclick="openLogin()">Scan Card</button>
+
+</div>
+
+
+<!-- SCANNER PAGE -->
+
+<div id="scanner" class="page">
+
+<h2>Card Scanner</h2>
+
+<input id="loginCard" placeholder="Enter Card Number">
+
+<br>
 
 <button onclick="startScanner()">Start Scan</button>
 
-<div id="scannerBox">
+<div id="scannerBox">00000000</div>
 
-<div id="line"></div>
+<p id="scanResult">Reading : </p>
 
-</div>
-
-<div id="reading">Reading : ----</div>
+<button onclick="goHome()">Back</button>
 
 </div>
 
+
+<!-- ACCOUNT PAGE -->
+
+<div id="account" class="page">
+
+<h2 id="accName"></h2>
+
+<p id="accJob"></p>
+
+<p id="accCL"></p>
+
+<p id="accCard"></p>
+
+<p id="accNational"></p>
+
+<p id="accBalance"></p>
+
+<button onclick="goHome()">Logout</button>
+
 </div>
+
+
 
 <script>
 
 let accounts={
+
 "1001":{
-name:"City Minister",
-job:"Minister",
-balance:999999999999
+name:"Ali Khan",
+job:"Teacher",
+cl:"A",
+card:"1001",
+national:"35201",
+balance:50000,
+pattern:"10101010"
 },
 
-"2001":{
+"1002":{
 name:"Hassan Abbas",
 job:"Engineer",
-balance:50000
+cl:"B",
+card:"1002",
+national:"35202",
+balance:60000,
+pattern:"11001100"
 },
 
-"2002":{
+"1003":{
 name:"Hussain Abbas",
-job:"Teacher",
-balance:45000
+job:"Doctor",
+cl:"A",
+card:"1003",
+national:"35203",
+balance:70000,
+pattern:"11110000"
 }
+
+}
+
+function show(id){
+
+document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"))
+
+document.getElementById(id).classList.add("active")
+
+}
+
+function openLogin(){
+
+show("scanner")
+
+}
+
+function goHome(){
+
+show("home")
+
+}
+
+function loginAccount(card){
+
+let a=accounts[card]
+
+if(!a)return
+
+accName.innerText="Name : "+a.name
+accJob.innerText="Job : "+a.job
+accCL.innerText="CL : "+a.cl
+accCard.innerText="Card No : "+a.card
+accNational.innerText="National No : "+a.national
+accBalance.innerText="Balance : "+a.balance
+
+show("account")
+
 }
 
 let scanning=false
-let pattern=""
+let scanTimer=null
 
 function startScanner(){
 
+let card=loginCard.value
+
+if(!accounts[card]){
+alert("Card not found")
+return
+}
+
 scanning=true
-pattern=randomPattern()
 
-scanLoop()
+clearInterval(scanTimer)
 
-}
-
-function randomPattern(){
-
-let p=""
-
-for(let i=0;i<8;i++){
-
-p+=Math.random()>0.5?"1":"0"
+scanTimer=setInterval(scanCenter,120)
 
 }
 
-return p
-
-}
-
-function scanLoop(){
+function scanCenter(){
 
 if(!scanning)return
+
+let card=loginCard.value
+
+if(!accounts[card])return
 
 let reading=""
 
@@ -168,39 +223,17 @@ reading+=Math.random()>0.5?"1":"0"
 
 }
 
-document.getElementById("reading").innerText="Reading : "+reading
+scannerBox.innerText=reading
+scanResult.innerText="Reading : "+reading
 
-if(reading===pattern){
-
-login()
-
-}
-
-setTimeout(scanLoop,120)
-
-}
-
-function login(){
+if(reading===accounts[card].pattern){
 
 scanning=false
+clearInterval(scanTimer)
 
-let card=document.getElementById("cardInput").value
-
-let acc=accounts[card]
-
-if(!acc){
-
-alert("Account not found")
-
-return
+loginAccount(card)
 
 }
-
-alert(
-"Name : "+acc.name+
-"\nJob : "+acc.job+
-"\nBalance : "+acc.balance
-)
 
 }
 
