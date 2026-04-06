@@ -355,13 +355,23 @@ let reading=""
 
 for(let i=0;i<8;i++){
 
-let x = startX + i*30 + 15
+let x = startX + i*30 + 5
+let y = centerY - 5
 
-let pixel = ctx.getImageData(x,centerY,1,1).data
+let data = ctx.getImageData(x,y,10,10).data
 
-let brightness = (pixel[0]+pixel[1]+pixel[2])/3
+let total=0
 
-if(brightness < 120){
+for(let p=0;p<data.length;p+=4){
+
+let brightness = (data[p] + data[p+1] + data[p+2]) / 3
+total += brightness
+
+}
+
+let avg = total / (data.length/4)
+
+if(avg < 130){
 reading+="1"
 }else{
 reading+="0"
