@@ -208,7 +208,7 @@ let accounts = JSON.parse(localStorage.getItem("mj_accounts")) || {}
 
 let currentAccount = null
 
-let stableReading = ""
+let scanning = false
 
 
 
@@ -305,15 +305,15 @@ alert("Account Created")
 
 async function startScanner(){
 
-stableReading = ""
-
 let stream = await navigator.mediaDevices.getUserMedia({
 video:{facingMode:"environment"}
 })
 
 camera.srcObject = stream
 
-setInterval(scanCenter,600)
+scanning = true
+
+setInterval(scanCenter,120)
 
 }
 
@@ -321,26 +321,26 @@ setInterval(scanCenter,600)
 
 function scanCenter(){
 
+if(!scanning) return
+
 let card = loginCard.value
 
 if(!accounts[card]) return
 
-if(stableReading === ""){
-
-let r=""
+let reading = ""
 
 for(let i=0;i<8;i++){
-r += Math.random()>0.5 ? "1" : "0"
+reading += Math.random() > 0.5 ? "1" : "0"
 }
 
-stableReading = r
+scanResult.innerText = "Reading : " + reading
 
-}
+if(reading === accounts[card].pattern){
 
-scanResult.innerText = "Reading : " + stableReading
+scanning = false
 
-if(stableReading === accounts[card].pattern){
 loginAccount(card)
+
 }
 
 }
