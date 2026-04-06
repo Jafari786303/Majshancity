@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digital Bank</title>
+<title>National Digital Bank</title>
 
 <style>
 
@@ -130,7 +130,8 @@ Scanner Reading : <span id="scanResult">---</span>
 <input id="ccl" placeholder="CL"><br>
 <input id="cnational" placeholder="National No"><br>
 <input id="ccard" placeholder="Card No"><br>
-<input id="cpattern" placeholder="Pattern Code (example 010101)"><br>
+
+<input id="cpattern" maxlength="8" placeholder="8 Digit Pattern Code"><br>
 
 <button onclick="createAccount()">Create</button>
 
@@ -188,8 +189,8 @@ Scanner Reading : <span id="scanResult">---</span>
 <script>
 
 let video=document.getElementById("camera")
-let current=null
 let scanText=document.getElementById("scanResult")
+let current=null
 
 if(!localStorage.accounts){
 
@@ -202,7 +203,7 @@ cl:"VIP",
 national:"000000",
 card:"0001",
 balance:"Infinity",
-pattern:"111111"
+pattern:"11111111"
 }
 
 localStorage.accounts=JSON.stringify(data)
@@ -252,15 +253,21 @@ login(card)
 
 }
 
-},500)
+},400)
 
 }
 
 function mockScan(){
 
-let patterns=["000000","111111","010101","101010"]
+let result=""
 
-return patterns[Math.floor(Math.random()*patterns.length)]
+for(let i=0;i<8;i++){
+
+result+=Math.random()>0.5?"1":"0"
+
+}
+
+return result
 
 }
 
@@ -283,6 +290,11 @@ balance.innerText=acc.balance
 }
 
 function createAccount(){
+
+if(cpattern.value.length!=8){
+alert("Pattern must be exactly 8 digits")
+return
+}
 
 let data=JSON.parse(localStorage.accounts)
 
@@ -330,6 +342,7 @@ function adminLogin(){
 if(pin.value=="303786303"){
 
 openPanel("admin")
+
 showAccounts()
 
 }
@@ -356,6 +369,7 @@ CL:<input value="${a.cl}" onchange="edit('${card}','cl',this.value)"><br>
 National:<input value="${a.national}" onchange="edit('${card}','national',this.value)"><br>
 Card:<input value="${a.card}" onchange="edit('${card}','card',this.value)"><br>
 Balance:<input value="${a.balance}" onchange="edit('${card}','balance',this.value)"><br>
+Pattern:<input maxlength="8" value="${a.pattern}" onchange="edit('${card}','pattern',this.value)"><br>
 
 </div>
 
@@ -370,6 +384,11 @@ accounts.innerHTML=html
 function edit(card,key,val){
 
 let data=JSON.parse(localStorage.accounts)
+
+if(key=="pattern" && val.length!=8){
+alert("Pattern must be 8 digits")
+return
+}
 
 data[card][key]=val
 
