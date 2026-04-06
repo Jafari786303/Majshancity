@@ -2,138 +2,86 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MJ City Bank</title>
+<title>Bank Scanner Login</title>
 
 <style>
 
 body{
 margin:0;
 font-family:Arial;
-background:linear-gradient(135deg,#0f5132,#198754,#0f5132);
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
+background:linear-gradient(#0f5132,#198754);
 color:white;
-}
-
-.container{
-width:95%;
-max-width:420px;
-background:rgba(0,0,0,0.35);
-backdrop-filter:blur(10px);
-border-radius:18px;
-padding:20px;
-box-shadow:0 0 25px rgba(0,0,0,0.5);
 text-align:center;
 }
 
-.logo{
-width:110px;
-margin-bottom:10px;
-}
-
-.title{
-font-size:28px;
-font-weight:bold;
-letter-spacing:2px;
-}
-
-.tag{
-font-size:14px;
-opacity:.8;
-margin-bottom:20px;
-}
-
-button{
-width:90%;
-padding:13px;
-margin:7px;
-border:none;
-border-radius:10px;
-background:linear-gradient(45deg,#20c997,#198754);
-color:white;
-font-size:15px;
-cursor:pointer;
+h1{
+margin-top:20px;
 }
 
 input{
-width:85%;
-padding:10px;
-margin:5px;
+width:80%;
+padding:12px;
 border-radius:8px;
 border:none;
+margin-top:10px;
+font-size:18px;
+}
+
+button{
+width:80%;
+padding:14px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#20c997;
+font-size:18px;
+color:white;
+}
+
+#videoContainer{
+position:relative;
+width:90%;
+margin:auto;
+margin-top:15px;
 }
 
 video{
 width:100%;
-border-radius:10px;
+border-radius:12px;
 }
 
-.scanArea{
-position:relative;
-}
-
-.scanLine{
+#scanBox{
 position:absolute;
-width:100%;
-height:3px;
-background:red;
-animation:scan 2s infinite linear;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+width:280px;
+height:70px;
+border:4px solid #00ffae;
+border-radius:12px;
+box-shadow:0 0 10px #00ffae;
 }
 
-.scanBox{
+.grid{
+position:absolute;
+top:0;
+bottom:0;
+width:1px;
+background:#00ffae;
+}
+
+#line{
 position:absolute;
 top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-width:240px;
-height:60px;
-border:3px solid #00ff9c;
-border-radius:6px;
-box-shadow:0 0 10px #00ff9c;
-display:grid;
-grid-template-columns:repeat(8,1fr);
-pointer-events:none;
-}
-
-.scanBox div{
-border-right:1px solid rgba(0,255,156,0.6);
-}
-
-.scanBox div:last-child{
-border-right:none;
-}
-
-@keyframes scan{
-0%{top:10%}
-50%{top:90%}
-100%{top:10%}
-}
-
-.card{
-background:white;
-color:black;
-padding:15px;
-border-radius:12px;
-text-align:left;
-}
-
-.adminBox{
-background:white;
-color:black;
-max-height:200px;
-overflow:auto;
-border-radius:10px;
-padding:10px;
-}
-
-.closeBtn{
+left:0;
+right:0;
+height:3px;
 background:red;
 }
 
-canvas{
-display:none;
+#reading{
+font-size:20px;
+margin-top:10px;
 }
 
 </style>
@@ -141,201 +89,69 @@ display:none;
 
 <body>
 
-<div class="container" id="home">
-
-<img id="logoImg" class="logo">
-
-<div class="title">MJ CITY BANK</div>
-
-<div class="tag">Secure • Smart • Educational Banking</div>
-
-<button onclick="openLogin()">Login</button>
-<button onclick="openCreate()">Create Account</button>
-<button onclick="openAdmin()">Admin Panel</button>
-
-</div>
-
-
-
-<div class="container" id="login" style="display:none">
-
-<h3>Login</h3>
+<h1>Login</h1>
 
 <input id="loginCard" placeholder="Card Number">
 
 <button onclick="startScanner()">Start Scanner</button>
 
-<div class="scanArea">
+<div id="videoContainer">
 
-<video id="camera" autoplay></video>
+<video id="camera" autoplay playsinline></video>
 
-<div class="scanLine"></div>
+<div id="scanBox">
 
-<div class="scanBox">
-<div></div><div></div><div></div><div></div>
-<div></div><div></div><div></div><div></div>
-</div>
+<div id="line"></div>
 
-</div>
-
-<div id="scanResult"></div>
-
-<button class="closeBtn" onclick="goHome()">Close</button>
-
-</div>
-
-
-
-<div class="container" id="create" style="display:none">
-
-<h3>Create Account</h3>
-
-<input id="name" placeholder="Name">
-<input id="job" placeholder="Job">
-<input id="cl" placeholder="CL">
-<input id="nation" placeholder="National No">
-<input id="card" placeholder="Card No">
-<input id="pattern" placeholder="Pattern (8 digits 0/1)">
-
-<button onclick="createAccount()">Create</button>
-
-<button class="closeBtn" onclick="goHome()">Close</button>
+<div class="grid" style="left:12.5%"></div>
+<div class="grid" style="left:25%"></div>
+<div class="grid" style="left:37.5%"></div>
+<div class="grid" style="left:50%"></div>
+<div class="grid" style="left:62.5%"></div>
+<div class="grid" style="left:75%"></div>
+<div class="grid" style="left:87.5%"></div>
 
 </div>
 
-
-
-<div class="container" id="account" style="display:none">
-
-<h3>Your Card</h3>
-
-<div id="cardUI" class="card"></div>
-
-<input id="sendCard" placeholder="Send To Card">
-<input id="sendAmount" placeholder="Amount">
-
-<button onclick="sendMoney()">Send Money</button>
-
-<button class="closeBtn" onclick="goHome()">Logout</button>
-
 </div>
 
+<div id="reading">Reading : --------</div>
 
-
-<div class="container" id="admin" style="display:none">
-
-<h3>Admin Panel</h3>
-
-<input id="logoURL" placeholder="Logo Image URL">
-<button onclick="saveLogo()">Save Logo</button>
-
-<div class="adminBox" id="adminList"></div>
-
-<button onclick="goHome()">Close</button>
-
-</div>
-
-
-
-<canvas id="scanCanvas"></canvas>
-
-
+<canvas id="canvas" style="display:none"></canvas>
 
 <script>
 
-let accounts = JSON.parse(localStorage.getItem("mj_accounts")) || {}
+let camera=document.getElementById("camera")
+let canvas=document.getElementById("canvas")
+let ctx=canvas.getContext("2d")
 
-let currentAccount = null
-let scanning = false
-let scanTimer = null
+let scanTimer
+let scanning=false
 
-const canvas = document.getElementById("scanCanvas")
-const ctx = canvas.getContext("2d")
-
-if(!accounts["0000"]){
-
-accounts["0000"]={
-name:"City Minister",
-job:"Minister",
-cl:"VIP",
-nation:"000000",
-card:"0000",
-balance:999999999999999,
-pattern:"11111111"
+let accounts={
+"5555":{
+name:"Majshan",
+balance:5000,
+pattern:"10110101"
+}
 }
 
-}
+function startScanner(){
 
-function saveData(){
-localStorage.setItem("mj_accounts",JSON.stringify(accounts))
-}
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+.then(function(stream){
 
-function hideAll(){
-home.style.display="none"
-login.style.display="none"
-create.style.display="none"
-account.style.display="none"
-admin.style.display="none"
-}
+camera.srcObject=stream
 
-function goHome(){
-location.reload()
-}
+camera.onloadedmetadata=function(){
 
-function openLogin(){
-hideAll()
-login.style.display="block"
-}
+scanning=true
 
-function openCreate(){
-hideAll()
-create.style.display="block"
-}
-
-function openAdmin(){
-
-let pin = prompt("Enter Admin Pin")
-
-if(pin!="303786303") return
-
-hideAll()
-admin.style.display="block"
-
-loadAdmin()
+scanTimer=setInterval(scanCenter,150)
 
 }
 
-function createAccount(){
-
-let c = card.value
-
-accounts[c]={
-name:name.value,
-job:job.value,
-cl:cl.value,
-nation:nation.value,
-card:c,
-balance:0,
-pattern:pattern.value
-}
-
-saveData()
-
-alert("Account Created")
-
-}
-
-async function startScanner(){
-
-let stream = await navigator.mediaDevices.getUserMedia({
-video:{facingMode:"environment"}
 })
-
-camera.srcObject = stream
-
-scanning = true
-
-scanTimer = setInterval(scanCenter,200)
 
 }
 
@@ -343,176 +159,60 @@ function scanCenter(){
 
 if(!scanning) return
 
-canvas.width = camera.videoWidth
-canvas.height = camera.videoHeight
+canvas.width=camera.videoWidth
+canvas.height=camera.videoHeight
 
 ctx.drawImage(camera,0,0)
 
-let startX = canvas.width/2 - 120
-let centerY = canvas.height/2
+let startX=canvas.width/2-140
+let centerY=canvas.height/2
 
 let reading=""
 
 for(let i=0;i<8;i++){
 
-let x = startX + i*30 + 5
-let y = centerY - 5
+let x=startX+i*35+8
+let y=centerY-10
 
-let data = ctx.getImageData(x,y,10,10).data
+let data=ctx.getImageData(x,y,20,20).data
 
 let total=0
 
 for(let p=0;p<data.length;p+=4){
 
-let brightness = (data[p] + data[p+1] + data[p+2]) / 3
-total += brightness
+let brightness=(data[p]+data[p+1]+data[p+2])/3
+
+total+=brightness
 
 }
 
-let avg = total / (data.length/4)
+let avg=total/(data.length/4)
 
-if(avg < 130){
+if(avg<140){
+
 reading+="1"
+
 }else{
+
 reading+="0"
-}
 
 }
 
-scanResult.innerText="Reading : "+reading
+}
 
-let card=loginCard.value
+document.getElementById("reading").innerText="Reading : "+reading
+
+let card=document.getElementById("loginCard").value
 
 if(accounts[card] && reading===accounts[card].pattern){
 
 scanning=false
 clearInterval(scanTimer)
 
-loginAccount(card)
+alert("Login Successful\nWelcome "+accounts[card].name)
 
 }
 
-}
-
-function loginAccount(card){
-
-currentAccount = accounts[card]
-
-hideAll()
-
-account.style.display="block"
-
-displayCard()
-
-}
-
-function displayCard(){
-
-cardUI.innerHTML =
-
-`
-Name : ${currentAccount.name}<br>
-Job : ${currentAccount.job}<br>
-CL : ${currentAccount.cl}<br>
-National No : ${currentAccount.nation}<br>
-Card No : ${currentAccount.card}<br>
-Balance : ${currentAccount.balance}
-`
-
-}
-
-function sendMoney(){
-
-let to = sendCard.value
-let amount = parseInt(sendAmount.value)
-
-if(!accounts[to]){
-alert("Account not found")
-return
-}
-
-if(currentAccount.balance < amount){
-alert("Not enough balance")
-return
-}
-
-currentAccount.balance -= amount
-accounts[to].balance += amount
-
-saveData()
-
-displayCard()
-
-}
-
-function loadAdmin(){
-
-let html=""
-
-for(let id in accounts){
-
-let a=accounts[id]
-
-html+=`
-
-<div>
-
-<b>${a.name}</b> (${a.card})<br>
-Balance : ${a.balance}<br>
-
-<button onclick="editAccount('${id}')">Edit</button>
-<button onclick="deleteAccount('${id}')">Delete</button>
-
-<hr>
-
-</div>
-
-`
-
-}
-
-adminList.innerHTML=html
-
-}
-
-function editAccount(id){
-
-let n = prompt("Name",accounts[id].name)
-let p = prompt("Pattern",accounts[id].pattern)
-
-accounts[id].name = n
-accounts[id].pattern = p
-
-saveData()
-
-loadAdmin()
-
-}
-
-function deleteAccount(id){
-
-delete accounts[id]
-
-saveData()
-
-loadAdmin()
-
-}
-
-function saveLogo(){
-
-let url = logoURL.value
-
-localStorage.setItem("mj_logo",url)
-
-logoImg.src = url
-
-}
-
-let savedLogo = localStorage.getItem("mj_logo")
-
-if(savedLogo){
-logoImg.src = savedLogo
 }
 
 </script>
