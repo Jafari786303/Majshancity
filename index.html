@@ -1,10 +1,7 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pattern Scanner</title>
-
-<style>
+<title>8 Bit Pattern Scanner</title><style>
 
 body{
 margin:0;
@@ -15,19 +12,9 @@ font-family:Arial;
 }
 
 video{
-width:90%;
+width:92%;
 border:3px solid cyan;
 margin-top:20px;
-}
-
-canvas{
-display:none;
-}
-
-#result{
-margin-top:20px;
-font-size:22px;
-color:yellow;
 }
 
 button{
@@ -36,59 +23,68 @@ font-size:18px;
 margin-top:15px;
 }
 
-</style>
-</head>
+#result{
+margin-top:20px;
+font-size:20px;
+color:yellow;
+}
 
-<body>
+</style></head><body><h2>Custom Pattern Scanner</h2><video id="camera" autoplay playsinline></video>
 
-<h2>Shape Pattern Scanner</h2>
+<br><button onclick="startScan()">Start Scan</button>
 
-<video id="camera" autoplay></video>
-<canvas id="canvas"></canvas>
+<div id="result">Waiting...</div><script>
 
-<br>
+let targetPattern=""
 
-<button onclick="startScan()">Start Scan</button>
-
-<div id="result">Waiting...</div>
-
-<script>
-
-const targetPattern = "0101"; // یہاں اپنا pattern لکھیں
-
-let video = document.getElementById("camera");
-let canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
+const video=document.getElementById("camera")
 
 function startScan(){
 
-navigator.mediaDevices.getUserMedia({video:true})
+targetPattern=prompt("Enter 8 bit pattern (example 01010101)")
+
+if(!targetPattern || targetPattern.length!=8){
+alert("Pattern must be 8 bits")
+return
+}
+
+navigator.mediaDevices.getUserMedia({
+video:{
+facingMode:{exact:"environment"}
+}
+})
 .then(stream=>{
-video.srcObject = stream
+video.srcObject=stream
 scanLoop()
+})
+.catch(()=>{
+alert("Back camera not available")
 })
 
 }
 
 function scanLoop(){
 
-canvas.width = video.videoWidth
-canvas.height = video.videoHeight
+let canvas=document.createElement("canvas")
+let ctx=canvas.getContext("2d")
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
 
 ctx.drawImage(video,0,0)
 
-let image = ctx.getImageData(0,0,canvas.width,canvas.height)
+let frame=ctx.getImageData(0,0,canvas.width,canvas.height)
 
-let data = image.data
+let data=frame.data
 
-let redCount = 0
-let blueCount = 0
+let redCount=0
+let blueCount=0
 
 for(let i=0;i<data.length;i+=4){
 
-let r = data[i]
-let g = data[i+1]
-let b = data[i+2]
+let r=data[i]
+let g=data[i+1]
+let b=data[i+2]
 
 if(r>200 && g<80 && b<80){
 redCount++
@@ -100,30 +96,21 @@ blueCount++
 
 }
 
-let pattern = ""
+let pattern=""
 
-if(redCount>1000){
-pattern += "0"
-}
+if(redCount>1000) pattern+="0"
+if(blueCount>1000) pattern+="1"
 
-if(blueCount>1000){
-pattern += "1"
-}
+document.getElementById("result").innerText=
+"Detected Pattern: "+pattern
 
-document.getElementById("result").innerText =
-"Detected Pattern : " + pattern
-
-if(pattern == targetPattern){
-
+if(pattern===targetPattern){
 alert("Done")
-
 }
 
 requestAnimationFrame(scanLoop)
 
 }
 
-</script>
-
-</body>
+</script></body>
 </html>
