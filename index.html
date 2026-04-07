@@ -2,86 +2,38 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bank Scanner Login</title>
+<title>Pattern Scanner</title>
 
 <style>
 
 body{
 margin:0;
-font-family:Arial;
-background:linear-gradient(#0f5132,#198754);
+background:#111;
 color:white;
 text-align:center;
-}
-
-h1{
-margin-top:20px;
-}
-
-input{
-width:80%;
-padding:12px;
-border-radius:8px;
-border:none;
-margin-top:10px;
-font-size:18px;
-}
-
-button{
-width:80%;
-padding:14px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-background:#20c997;
-font-size:18px;
-color:white;
-}
-
-#videoContainer{
-position:relative;
-width:90%;
-margin:auto;
-margin-top:15px;
+font-family:Arial;
 }
 
 video{
-width:100%;
-border-radius:12px;
+width:90%;
+border:3px solid cyan;
+margin-top:20px;
 }
 
-#scanBox{
-position:absolute;
-left:50%;
-top:50%;
-transform:translate(-50%,-50%);
-width:280px;
-height:70px;
-border:4px solid #00ffae;
-border-radius:12px;
-box-shadow:0 0 10px #00ffae;
+canvas{
+display:none;
 }
 
-.grid{
-position:absolute;
-top:0;
-bottom:0;
-width:1px;
-background:#00ffae;
+#result{
+margin-top:20px;
+font-size:22px;
+color:yellow;
 }
 
-#line{
-position:absolute;
-top:50%;
-left:0;
-right:0;
-height:3px;
-background:red;
-}
-
-#reading{
-font-size:20px;
-margin-top:10px;
+button{
+padding:12px 25px;
+font-size:18px;
+margin-top:15px;
 }
 
 </style>
@@ -89,129 +41,85 @@ margin-top:10px;
 
 <body>
 
-<h1>Login</h1>
+<h2>Shape Pattern Scanner</h2>
 
-<input id="loginCard" placeholder="Card Number">
+<video id="camera" autoplay></video>
+<canvas id="canvas"></canvas>
 
-<button onclick="startScanner()">Start Scanner</button>
+<br>
 
-<div id="videoContainer">
+<button onclick="startScan()">Start Scan</button>
 
-<video id="camera" autoplay playsinline></video>
-
-<div id="scanBox">
-
-<div id="line"></div>
-
-<div class="grid" style="left:12.5%"></div>
-<div class="grid" style="left:25%"></div>
-<div class="grid" style="left:37.5%"></div>
-<div class="grid" style="left:50%"></div>
-<div class="grid" style="left:62.5%"></div>
-<div class="grid" style="left:75%"></div>
-<div class="grid" style="left:87.5%"></div>
-
-</div>
-
-</div>
-
-<div id="reading">Reading : --------</div>
-
-<canvas id="canvas" style="display:none"></canvas>
+<div id="result">Waiting...</div>
 
 <script>
 
-let camera=document.getElementById("camera")
-let canvas=document.getElementById("canvas")
-let ctx=canvas.getContext("2d")
+const targetPattern = "0101"; // یہاں اپنا pattern لکھیں
 
-let scanTimer
-let scanning=false
+let video = document.getElementById("camera");
+let canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
 
-let accounts={
-"5555":{
-name:"Majshan",
-balance:5000,
-pattern:"10110101"
-}
-}
+function startScan(){
 
-function startScanner(){
-
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(function(stream){
-
-camera.srcObject=stream
-
-camera.onloadedmetadata=function(){
-
-scanning=true
-
-scanTimer=setInterval(scanCenter,150)
-
-}
-
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{
+video.srcObject = stream
+scanLoop()
 })
 
 }
 
-function scanCenter(){
+function scanLoop(){
 
-if(!scanning) return
+canvas.width = video.videoWidth
+canvas.height = video.videoHeight
 
-canvas.width=camera.videoWidth
-canvas.height=camera.videoHeight
+ctx.drawImage(video,0,0)
 
-ctx.drawImage(camera,0,0)
+let image = ctx.getImageData(0,0,canvas.width,canvas.height)
 
-let startX=canvas.width/2-140
-let centerY=canvas.height/2
+let data = image.data
 
-let reading=""
+let redCount = 0
+let blueCount = 0
 
-for(let i=0;i<8;i++){
+for(let i=0;i<data.length;i+=4){
 
-let x=startX+i*35+8
-let y=centerY-10
+let r = data[i]
+let g = data[i+1]
+let b = data[i+2]
 
-let data=ctx.getImageData(x,y,20,20).data
-
-let total=0
-
-for(let p=0;p<data.length;p+=4){
-
-let brightness=(data[p]+data[p+1]+data[p+2])/3
-
-total+=brightness
-
+if(r>200 && g<80 && b<80){
+redCount++
 }
 
-let avg=total/(data.length/4)
-
-if(avg<140){
-
-reading+="1"
-
-}else{
-
-reading+="0"
-
+if(b>200 && r<80 && g<80){
+blueCount++
 }
 
 }
 
-document.getElementById("reading").innerText="Reading : "+reading
+let pattern = ""
 
-let card=document.getElementById("loginCard").value
+if(redCount>1000){
+pattern += "0"
+}
 
-if(accounts[card] && reading===accounts[card].pattern){
+if(blueCount>1000){
+pattern += "1"
+}
 
-scanning=false
-clearInterval(scanTimer)
+document.getElementById("result").innerText =
+"Detected Pattern : " + pattern
 
-alert("Login Successful\nWelcome "+accounts[card].name)
+if(pattern == targetPattern){
+
+alert("Done")
 
 }
+
+requestAnimationFrame(scanLoop)
 
 }
 
