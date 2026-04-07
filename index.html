@@ -1,7 +1,7 @@
 <!DOCTYPE html><html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pattern Scanner</title><style>
+<title>Shape Pattern Scanner</title><script src="https://docs.opencv.org/4.x/opencv.js"></script><style>
 
 body{
 margin:0;
@@ -17,42 +17,36 @@ border:3px solid cyan;
 margin-top:20px;
 }
 
-#result{
-margin-top:20px;
-font-size:22px;
-color:yellow;
-}
-
-button{
-padding:12px 30px;
-font-size:18px;
-margin-top:15px;
-}
-
 canvas{
 display:none;
 }
 
-</style></head><body><h2>8 Bit Pattern Scanner</h2><video id="video" autoplay playsinline></video>
+#status{
+margin-top:20px;
+font-size:20px;
+color:yellow;
+}
+
+button{
+padding:12px 25px;
+font-size:18px;
+margin-top:15px;
+}
+
+</style></head><body><h2>Triangle / Circle Pattern Scanner</h2><video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
-<br><button onclick="startScanner()">Start Scanner</button>
-
-<div id="result">Waiting...</div><script>
+<br>
+<button onclick="startScanner()">Start Scanner</button><div id="status">Waiting...</div><script>
 
 let targetPattern=""
-const video=document.getElementById("video")
-const canvas=document.getElementById("canvas")
-const ctx=canvas.getContext("2d")
+let video=document.getElementById("video")
+let canvas=document.getElementById("canvas")
+let ctx=canvas.getContext("2d")
 
 function startScanner(){
 
-targetPattern=prompt("Enter 8 bit pattern (example 01010101)")
-
-if(!targetPattern || targetPattern.length!=8){
-alert("Enter exactly 8 bits")
-return
-}
+targetPattern=prompt("Enter 8-bit pattern example: 01010101")
 
 navigator.mediaDevices.getUserMedia({
 video:{facingMode:"environment"}
@@ -73,34 +67,75 @@ canvas.height=video.videoHeight
 
 ctx.drawImage(video,0,0)
 
-let frame=ctx.getImageData(0,0,canvas.width,canvas.height)
-let data=frame.data
+let src=cv.imread(canvas)
+let gray=new cv.Mat()
 
-let red=0
-let blue=0
+cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY)
 
-for(let i=0;i<data.length;i+=4){
+let blur=new cv.Mat()
+cv.GaussianBlur(gray,blur,new cv.Size(5,5),0)
 
-let r=data[i]
-let g=data[i+1]
-let b=data[i+2]
+let edges=new cv.Mat()
+cv.Canny(blur,edges,50,150)
 
-if(r>200 && g<80 && b<80) red++
-if(b>200 && r<80 && g<80) blue++
+let contours=new cv.MatVector()
+let hierarchy=new cv.Mat()
+
+cv.findContours(edges,contours,hierarchy,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE)
+
+let bits=[]
+
+for(let i=0;i<contours.size();i++){
+
+let cnt=contours.get(i)
+let approx=new cv.Mat()
+
+cv.approxPolyDP(
+cnt,
+approx,
+0.04*cv.arcLength(cnt,true),
+true
+)
+
+let sides=approx.rows
+
+if(sides==3){
+
+bits.push("0")
+
+}else{
+
+let area=cv.contourArea(cnt)
+let rect=cv.boundingRect(cnt)
+let ratio=area/(rect.width*rect.height)
+
+if(ratio>0.7){
+bits.push("1")
+}
 
 }
 
-let detected=""
+}
 
-if(red>1500) detected+="0"
-if(blue>1500) detected+="1"
+bits.sort()
 
-document.getElementById("result").innerText=
-"Detected: "+detected+" | Target: "+targetPattern
+let detected=bits.join("")
+
+document.getElementById("status").innerText=
+"Detected: "+detected
 
 if(detected===targetPattern){
+
 alert("Done")
+
 }
+
+src.delete()
+gray.delete()
+blur.delete()
+edges.delete()
+contours.delete()
+hierarchy.delete()
 
 requestAnimationFrame(scanLoop)
 
