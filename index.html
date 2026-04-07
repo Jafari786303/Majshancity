@@ -1,7 +1,7 @@
 <!DOCTYPE html><html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>8 Bit Shape Scanner</title><style>
+<title>8 Bit Scanner</title><style>
 
 body{
 background:#111;
@@ -19,7 +19,7 @@ border:3px solid cyan;
 
 #panel{
 margin-top:20px;
-font-size:20px;
+font-size:22px;
 }
 
 button{
@@ -32,7 +32,7 @@ canvas{
 display:none;
 }
 
-</style></head><body><h2>8-Bit Pattern Scanner</h2><video id="video" autoplay playsinline></video>
+</style></head><body><h2>8 Bit Pattern Scanner</h2><video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
 <br>
@@ -49,7 +49,7 @@ let ctx=canvas.getContext("2d")
 
 function start(){
 
-target=prompt("Enter 8 bit pattern (example 01010101)")
+target=prompt("Enter 8 bit pattern example: 01010101")
 
 if(!target || target.length!=8){
 alert("Pattern must be 8 bits")
@@ -57,7 +57,7 @@ return
 }
 
 document.getElementById("panel").innerHTML=
-"Target: "+target+"<br>Scanning: ..."
+"Target: "+target+"<br>Scanning: starting..."
 
 navigator.mediaDevices.getUserMedia({
 video:{facingMode:"environment"}
@@ -81,10 +81,21 @@ ctx.drawImage(video,0,0)
 let img=ctx.getImageData(0,0,canvas.width,canvas.height)
 let data=img.data
 
+let sectionWidth=canvas.width/8
+let pattern=""
+
+for(let s=0;s<8;s++){
+
 let red=0
 let blue=0
 
-for(let i=0;i<data.length;i+=4){
+let startX=Math.floor(s*sectionWidth)
+let endX=Math.floor((s+1)*sectionWidth)
+
+for(let y=0;y<canvas.height;y+=10){
+for(let x=startX;x<endX;x+=10){
+
+let i=(y*canvas.width+x)*4
 
 let r=data[i]
 let g=data[i+1]
@@ -94,11 +105,19 @@ if(r>200 && g<80 && b<80) red++
 if(b>200 && r<80 && g<80) blue++
 
 }
+}
 
-let pattern=""
+if(red>blue && red>20){
+pattern+="0"
+}
+else if(blue>red && blue>20){
+pattern+="1"
+}
+else{
+pattern+="-"
+}
 
-if(red>2000) pattern+="0"
-if(blue>2000) pattern+="1"
+}
 
 document.getElementById("panel").innerHTML=
 "Target: "+target+"<br>Scanning: "+pattern
