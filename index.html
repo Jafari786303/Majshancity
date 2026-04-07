@@ -1,7 +1,7 @@
 <!DOCTYPE html><html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>8 Bit Pattern Scanner</title><style>
+<title>Pattern Scanner</title><style>
 
 body{
 margin:0;
@@ -12,61 +12,61 @@ font-family:Arial;
 }
 
 video{
-width:92%;
+width:95%;
 border:3px solid cyan;
 margin-top:20px;
 }
 
+#result{
+margin-top:20px;
+font-size:22px;
+color:yellow;
+}
+
 button{
-padding:12px 25px;
+padding:12px 30px;
 font-size:18px;
 margin-top:15px;
 }
 
-#result{
-margin-top:20px;
-font-size:20px;
-color:yellow;
+canvas{
+display:none;
 }
 
-</style></head><body><h2>Custom Pattern Scanner</h2><video id="camera" autoplay playsinline></video>
+</style></head><body><h2>8 Bit Pattern Scanner</h2><video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 
-<br><button onclick="startScan()">Start Scan</button>
+<br><button onclick="startScanner()">Start Scanner</button>
 
 <div id="result">Waiting...</div><script>
 
 let targetPattern=""
+const video=document.getElementById("video")
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
 
-const video=document.getElementById("camera")
-
-function startScan(){
+function startScanner(){
 
 targetPattern=prompt("Enter 8 bit pattern (example 01010101)")
 
 if(!targetPattern || targetPattern.length!=8){
-alert("Pattern must be 8 bits")
+alert("Enter exactly 8 bits")
 return
 }
 
 navigator.mediaDevices.getUserMedia({
-video:{
-facingMode:{exact:"environment"}
-}
+video:{facingMode:"environment"}
 })
 .then(stream=>{
 video.srcObject=stream
+video.onloadedmetadata=()=>{
 scanLoop()
-})
-.catch(()=>{
-alert("Back camera not available")
+}
 })
 
 }
 
 function scanLoop(){
-
-let canvas=document.createElement("canvas")
-let ctx=canvas.getContext("2d")
 
 canvas.width=video.videoWidth
 canvas.height=video.videoHeight
@@ -74,11 +74,10 @@ canvas.height=video.videoHeight
 ctx.drawImage(video,0,0)
 
 let frame=ctx.getImageData(0,0,canvas.width,canvas.height)
-
 let data=frame.data
 
-let redCount=0
-let blueCount=0
+let red=0
+let blue=0
 
 for(let i=0;i<data.length;i+=4){
 
@@ -86,25 +85,20 @@ let r=data[i]
 let g=data[i+1]
 let b=data[i+2]
 
-if(r>200 && g<80 && b<80){
-redCount++
-}
-
-if(b>200 && r<80 && g<80){
-blueCount++
-}
+if(r>200 && g<80 && b<80) red++
+if(b>200 && r<80 && g<80) blue++
 
 }
 
-let pattern=""
+let detected=""
 
-if(redCount>1000) pattern+="0"
-if(blueCount>1000) pattern+="1"
+if(red>1500) detected+="0"
+if(blue>1500) detected+="1"
 
 document.getElementById("result").innerText=
-"Detected Pattern: "+pattern
+"Detected: "+detected+" | Target: "+targetPattern
 
-if(pattern===targetPattern){
+if(detected===targetPattern){
 alert("Done")
 }
 
