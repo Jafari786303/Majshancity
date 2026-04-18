@@ -1,134 +1,235 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>8 Bit Scanner</title><style>
+    <title>Majshan Bank</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 8px;
+            width: 220px;
+        }
+        button {
+            background: #22c55e;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        .hidden { display: none; }
+        img { border-radius: 10px; }
+        .box {
+            border: 1px solid #444;
+            padding: 15px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
 
-body{
-background:#111;
-color:white;
-font-family:Arial;
-text-align:center;
-margin:0;
+<h1>Majshan Bank</h1>
+
+<!-- LOGIN -->
+<div id="loginBox">
+    <input id="card" placeholder="Card Number"><br>
+    <input id="pin" type="password" placeholder="PIN"><br>
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+    <h2>Dashboard</h2>
+    <img id="profile" width="100"><br>
+
+    <p>Name: <span id="name"></span></p>
+    <p>CNIC: <span id="cnic"></span></p>
+    <p>CL: <span id="cl"></span></p>
+    <p>Balance: <span id="balance"></span></p>
+
+    <div class="box">
+        <h3>Send Money</h3>
+        <input id="toCard" placeholder="Receiver Card"><br>
+        <input id="amount" placeholder="Amount"><br>
+        <button onclick="sendMoney()">Send</button>
+    </div>
+
+    <div class="box">
+        <h3>Messages</h3>
+        <input id="msg" placeholder="Message"><br>
+        <button onclick="sendMessage()">Send</button>
+        <ul id="messages"></ul>
+    </div>
+
+    <button onclick="logout()">Logout</button>
+</div>
+
+<!-- ADMIN -->
+<div id="adminPanel" class="hidden">
+    <h2>Admin Panel</h2>
+    <div id="users"></div>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, collection
+} from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCbho9Xz750QHAGzvQK2H0ymZyXEvVvhZs",
+  authDomain: "mathsappdb-ea7d8.firebaseapp.com",
+  projectId: "mathsappdb-ea7d8",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let currentUser = null;
+
+// LOGIN
+window.login = async function () {
+    const card = cardInput.value;
+    const pin = pinInput.value;
+
+    const ref = doc(db, "accounts", card);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+        alert("Account not found");
+        return;
+    }
+
+    const data = snap.data();
+
+    if (data.pin != pin) {
+        alert("Wrong PIN");
+        return;
+    }
+
+    localStorage.setItem("user", card);
+
+    if (data.role === "admin") {
+        showAdmin();
+    } else {
+        showDashboard();
+    }
+};
+
+// LOAD USER
+async function showDashboard() {
+    loginBox.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+
+    const card = localStorage.getItem("user");
+    const snap = await getDoc(doc(db, "accounts", card));
+    const data = snap.data();
+
+    currentUser = data;
+
+    name.innerText = data.name || "";
+    cnic.innerText = data.cnic || "";
+    cl.innerText = data.cl || "";
+    balance.innerText = data.balance || 0;
+    profile.src = data.photo || "https://via.placeholder.com/100";
 }
 
-video{
-width:95%;
-margin-top:20px;
-border:3px solid cyan;
+// SEND MONEY
+window.sendMoney = async function () {
+    const to = toCard.value;
+    const amt = parseInt(amount.value);
+
+    const senderRef = doc(db, "accounts", localStorage.getItem("user"));
+    const receiverRef = doc(db, "accounts", to);
+
+    const senderSnap = await getDoc(senderRef);
+    const receiverSnap = await getDoc(receiverRef);
+
+    if (!receiverSnap.exists()) {
+        alert("Receiver not found");
+        return;
+    }
+
+    let sender = senderSnap.data();
+    let receiver = receiverSnap.data();
+
+    if (sender.role !== "minister") {
+        if (sender.balance < amt) {
+            alert("Low balance");
+            return;
+        }
+        sender.balance -= amt;
+    }
+
+    receiver.balance += amt;
+
+    await updateDoc(senderRef, { balance: sender.balance });
+    await updateDoc(receiverRef, { balance: receiver.balance });
+
+    alert("Transaction done");
+    showDashboard();
+};
+
+// MESSAGE
+window.sendMessage = async function () {
+    await setDoc(doc(collection(db, "messages")), {
+        from: localStorage.getItem("user"),
+        text: msg.value,
+        time: Date.now()
+    });
+    alert("Message sent");
+};
+
+// ADMIN
+async function showAdmin() {
+    loginBox.classList.add("hidden");
+    adminPanel.classList.remove("hidden");
+
+    const snap = await getDocs(collection(db, "accounts"));
+
+    users.innerHTML = "";
+
+    snap.forEach(docSnap => {
+        const d = docSnap.data();
+        users.innerHTML += `
+            <div class="box">
+                <p>${d.name} | Balance: ${d.balance}</p>
+                <button onclick="editUser('${docSnap.id}')">Edit</button>
+            </div>
+        `;
+    });
 }
 
-#panel{
-margin-top:20px;
-font-size:22px;
+// EDIT USER
+window.editUser = async function (card) {
+    const val = prompt("New Balance:");
+    await updateDoc(doc(db, "accounts", card), {
+        balance: parseInt(val)
+    });
+    showAdmin();
+};
+
+// LOGOUT
+window.logout = function () {
+    localStorage.removeItem("user");
+    location.reload();
+};
+
+// AUTO LOGIN
+const saved = localStorage.getItem("user");
+if (saved) {
+    const snap = await getDoc(doc(db, "accounts", saved));
+    if (snap.exists() && snap.data().role === "admin") {
+        showAdmin();
+    } else {
+        showDashboard();
+    }
 }
+</script>
 
-button{
-padding:12px 30px;
-font-size:18px;
-margin-top:15px;
-}
-
-canvas{
-display:none;
-}
-
-</style></head><body><h2>8 Bit Pattern Scanner</h2><video id="video" autoplay playsinline></video>
-<canvas id="canvas"></canvas>
-
-<br>
-<button onclick="start()">Start Scan</button><div id="panel">
-Target: -
-<br>
-Scanning: -
-</div><script>
-
-let target=""
-let video=document.getElementById("video")
-let canvas=document.getElementById("canvas")
-let ctx=canvas.getContext("2d")
-
-function start(){
-
-target=prompt("Enter 8 bit pattern example: 01010101")
-
-if(!target || target.length!=8){
-alert("Pattern must be 8 bits")
-return
-}
-
-document.getElementById("panel").innerHTML=
-"Target: "+target+"<br>Scanning: starting..."
-
-navigator.mediaDevices.getUserMedia({
-video:{facingMode:"environment"}
-})
-.then(stream=>{
-video.srcObject=stream
-video.onloadedmetadata=()=>{
-scan()
-}
-})
-
-}
-
-function scan(){
-
-canvas.width=video.videoWidth
-canvas.height=video.videoHeight
-
-ctx.drawImage(video,0,0)
-
-let img=ctx.getImageData(0,0,canvas.width,canvas.height)
-let data=img.data
-
-let sectionWidth=canvas.width/8
-let pattern=""
-
-for(let s=0;s<8;s++){
-
-let red=0
-let blue=0
-
-let startX=Math.floor(s*sectionWidth)
-let endX=Math.floor((s+1)*sectionWidth)
-
-for(let y=0;y<canvas.height;y+=10){
-for(let x=startX;x<endX;x+=10){
-
-let i=(y*canvas.width+x)*4
-
-let r=data[i]
-let g=data[i+1]
-let b=data[i+2]
-
-if(r>200 && g<80 && b<80) red++
-if(b>200 && r<80 && g<80) blue++
-
-}
-}
-
-if(red>blue && red>20){
-pattern+="0"
-}
-else if(blue>red && blue>20){
-pattern+="1"
-}
-else{
-pattern+="-"
-}
-
-}
-
-document.getElementById("panel").innerHTML=
-"Target: "+target+"<br>Scanning: "+pattern
-
-if(pattern===target){
-alert("Done")
-}
-
-requestAnimationFrame(scan)
-
-}
-
-</script></body>
+</body>
 </html>
