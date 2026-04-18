@@ -2,99 +2,59 @@
 <html>
 <head>
 <title>Majshan Bank</title>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+body{background:linear-gradient(135deg,#0f172a,#1e293b);color:white;}
 
-body{
-    background: linear-gradient(135deg,#0f172a,#1e293b);
-    color:white;
-}
-
-/* HEADER */
 .header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px 15px;
-    background:rgba(255,255,255,0.05);
+display:flex;justify-content:space-between;align-items:center;
+padding:10px;background:rgba(255,255,255,0.05);
 }
 
-.logo{
-    display:flex;
-    align-items:center;
-    gap:8px;
-}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo img{width:35px;height:35px;border-radius:8px;}
 
-.logo img{
-    width:35px;height:35px;border-radius:8px;
-}
-
-/* CENTER SCREEN */
 .center{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:calc(100vh - 60px);
-    padding:15px;
+display:flex;justify-content:center;align-items:center;
+min-height:calc(100vh - 60px);padding:10px;
 }
 
-/* CARD */
 .card{
-    width:100%;
-    max-width:350px;
-    background:rgba(255,255,255,0.05);
-    padding:20px;
-    border-radius:15px;
+width:100%;max-width:350px;
+background:rgba(255,255,255,0.05);
+padding:20px;border-radius:15px;
 }
 
 input,button{
-    width:100%;
-    padding:12px;
-    margin:8px 0;
-    border:none;
-    border-radius:8px;
+width:100%;padding:12px;margin:8px 0;
+border:none;border-radius:8px;
 }
 
-button{
-    background:#22c55e;
-    color:white;
-}
+button{background:#22c55e;color:white;}
 
-.link{
-    text-align:center;
-    color:#38bdf8;
-    margin-top:10px;
-}
+.link{text-align:center;color:#38bdf8;margin-top:10px;}
 
-/* PANELS */
 #dashboard,#admin{display:none;padding:15px;}
 
 .box{
-    background:rgba(255,255,255,0.05);
-    padding:12px;
-    border-radius:10px;
-    margin:10px 0;
+background:rgba(255,255,255,0.05);
+padding:12px;border-radius:10px;margin:10px 0;
 }
 
 img{border-radius:10px;}
-
-@media(max-width:500px){
-    .card{padding:15px;}
-}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-    <div class="logo">
-        <img id="bankLogo">
-        <b>Majshan Bank</b>
-    </div>
-    <button onclick="logout()">Logout</button>
+<div class="logo">
+<img id="bankLogo">
+<b>Majshan Bank</b>
+</div>
+<button onclick="logout()">Logout</button>
 </div>
 
 <div class="center">
@@ -114,6 +74,7 @@ img{border-radius:10px;}
 <h3>Signup</h3>
 <input id="sName" placeholder="Name">
 <input id="sPin" placeholder="PIN">
+<input type="file" id="sPhoto" accept="image/*">
 <button onclick="createAccount()">Create</button>
 <div class="link" onclick="showLogin()">Back</div>
 </div>
@@ -124,9 +85,9 @@ img{border-radius:10px;}
 <div id="dashboard">
 <h2>Dashboard</h2>
 
-<div class="box">
-<img id="profile" width="70"><br>
-<p id="name"></p>
+<div class="box" style="text-align:center;">
+<img id="profile" width="80"><br>
+<h3 id="name"></h3>
 <p>Balance: <span id="balance"></span></p>
 </div>
 
@@ -151,6 +112,7 @@ img{border-radius:10px;}
 <div class="box">
 <input id="aName" placeholder="Name">
 <input id="aPin" placeholder="PIN">
+<input type="file" id="aPhoto">
 <button onclick="createAccount()">Create Account</button>
 </div>
 
@@ -164,102 +126,108 @@ img{border-radius:10px;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc } 
+import { getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc }
 from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { getAuth,GoogleAuthProvider,signInWithPopup } 
+import { getAuth,GoogleAuthProvider,signInWithPopup }
 from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+import { getStorage,ref,uploadBytes,getDownloadURL }
+from "https://www.gstatic.com/firebasejs/12.12.0/firebase-storage.js";
 
-const app=initializeApp({
+let app,db,auth,storage;
+
+/* FIREBASE INIT WITH ERROR DETECTION */
+try{
+app=initializeApp({
 apiKey:"AIzaSyCbho9Xz750QHAGzvQK2H0ymZyXEvVvhZs",
 authDomain:"mathsappdb-ea7d8.firebaseapp.com",
 projectId:"mathsappdb-ea7d8"
 });
 
-const db=getFirestore(app);
-const auth=getAuth();
-const provider=new GoogleAuthProvider();
+db=getFirestore(app);
+auth=getAuth();
+storage=getStorage(app);
 
-/* FIXED LOGIN */
-window.login=async()=>{
-const card=loginCard.value.trim();
-const pin=loginPin.value.trim();
-
-if(card.length<4 || pin.length<2){
-alert("Enter valid details");return;
+}catch(e){
+alert("Firebase not working: "+e.message);
 }
+
+/* LOGIN */
+window.login=async()=>{
+try{
+let card=loginCard.value.trim();
+let pin=loginPin.value.trim();
 
 let snap=await getDocs(collection(db,"accounts"));
 let found=null;
 
 snap.forEach(d=>{
 let x=d.data();
-if(x.card===card && x.pin===pin){
-found=d;
-}
+if(x.card===card && x.pin===pin){found=d;}
 });
 
-if(!found){
-alert("Wrong card or PIN");
-return;
-}
+if(!found){alert("Wrong details");return;}
 
 localStorage.setItem("user",found.id);
 
-if(found.data().role==="admin"){
-loadAdmin();
-}else{
-loadUser();
-}
+/* ROLE CHECK FIX */
+if(found.data().role==="admin"){loadAdmin();}
+else{loadUser();}
+
+}catch(e){alert("Firebase error");}
 };
 
-/* GOOGLE LOGIN FIX */
+/* GOOGLE LOGIN */
 window.googleLogin=async()=>{
 try{
-let res=await signInWithPopup(auth,provider);
+let res=await signInWithPopup(auth,new GoogleAuthProvider());
 let snap=await getDocs(collection(db,"accounts"));
 
-let found=null;
 snap.forEach(d=>{
 if(d.data().googleUid===res.user.uid){
-found=d;
+localStorage.setItem("user",d.id);
+loadUser();
 }
 });
-
-if(!found){
-alert("Account not linked");return;
-}
-
-localStorage.setItem("user",found.id);
-loadUser();
-
-}catch(e){
-alert("Google login failed");
-}
+}catch(e){alert("Google login failed");}
 };
 
-/* UI SWITCH */
-window.showSignup=()=>{loginBox.style.display="none";signupBox.style.display="block";}
-window.showLogin=()=>{signupBox.style.display="none";loginBox.style.display="block";}
-
-/* CREATE */
+/* CREATE ACCOUNT */
 window.createAccount=async()=>{
+try{
 let name=aName?.value||sName.value;
 let pin=aPin?.value||sPin.value;
+let file=(aPhoto?.files[0])||(sPhoto?.files[0]);
 
-if(!name||!pin){alert("Fill fields");return;}
+if(!name||!pin||!file){alert("Fill all");return;}
 
 let card="";
 for(let i=0;i<16;i++){card+=Math.floor(Math.random()*10);}
 
+/* upload image */
+let r=ref(storage,"profiles/"+Date.now());
+await uploadBytes(r,file);
+let url=await getDownloadURL(r);
+
+/* detect admin creating */
+let role="user";
+let current=localStorage.getItem("user");
+
+if(current){
+let s=await getDoc(doc(db,"accounts",current));
+if(s.exists() && s.data().role==="admin"){
+role="user";
+}
+}
+
+/* CREATE */
 await setDoc(doc(collection(db,"accounts")),{
-name,pin,card,
-role:"user",
-balance:0,
-photo:"https://via.placeholder.com/100",
-googleUid:null
+name,pin,card,role,
+balance:0,photo:url,googleUid:null
 });
 
 alert("Card: "+card);
+
+}catch(e){alert("Firebase error");}
 };
 
 /* LOAD USER */
@@ -268,15 +236,15 @@ loginBox.style.display="none";
 signupBox.style.display="none";
 dashboard.style.display="block";
 
-let snap=await getDoc(doc(db,"accounts",localStorage.getItem("user")));
-let d=snap.data();
+let s=await getDoc(doc(db,"accounts",localStorage.getItem("user")));
+let d=s.data();
 
 name.innerText=d.name;
 balance.innerText=d.balance;
 profile.src=d.photo;
 }
 
-/* ADMIN */
+/* ADMIN PANEL */
 async function loadAdmin(){
 loginBox.style.display="none";
 admin.style.display="block";
@@ -288,7 +256,7 @@ snap.forEach(d=>{
 let x=d.data();
 users.innerHTML+=`
 <div class="box">
-${x.name} | ${x.balance}
+${x.name} | ${x.balance} | ${x.role}
 <button onclick="editUser('${d.id}')">Edit</button>
 </div>`;
 });
@@ -300,29 +268,26 @@ await updateDoc(doc(db,"accounts",id),{balance:+val});
 loadAdmin();
 };
 
-/* SEND MONEY FIX */
+/* SEND MONEY */
 window.sendMoney=async()=>{
+try{
 let amt=parseInt(amount.value);
-
-if(!amt || amt<=0){
-alert("Invalid amount");return;
-}
+if(!amt){alert("Invalid");return;}
 
 let all=await getDocs(collection(db,"accounts"));
 let receiver=null;
 
 all.forEach(d=>{
-if(d.data().card===toCard.value){
-receiver=d;
-}
+if(d.data().card===toCard.value){receiver=d;}
 });
 
-if(!receiver){alert("User not found");return;}
+if(!receiver){alert("Not found");return;}
 
 let senderRef=doc(db,"accounts",localStorage.getItem("user"));
 let sender=(await getDoc(senderRef)).data();
 let rec=receiver.data();
 
+/* MINISTER FIX */
 if(sender.role!=="minister" && sender.balance<amt){
 alert("Low balance");return;
 }
@@ -334,16 +299,19 @@ await updateDoc(senderRef,{balance:sender.balance});
 await updateDoc(doc(db,"accounts",receiver.id),{balance:rec.balance});
 
 loadUser();
+
+}catch(e){alert("Firebase error");}
 };
 
 /* MESSAGE */
 window.sendMessage=async()=>{
-if(!msg.value){return;}
+try{
 await setDoc(doc(collection(db,"messages")),{
 msg:msg.value,user:localStorage.getItem("user")
 });
 msg.value="";
 alert("Sent");
+}catch(e){alert("Firebase error");}
 };
 
 /* LOGOUT */
