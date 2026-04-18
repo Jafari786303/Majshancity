@@ -3,6 +3,8 @@
 <head>
 <title>Majshan Bank</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
 
@@ -14,39 +16,38 @@ body{
 /* HEADER */
 .header{
     display:flex;
-    align-items:center;
     justify-content:space-between;
-    padding:15px 30px;
+    align-items:center;
+    padding:12px 15px;
     background:rgba(255,255,255,0.05);
-    backdrop-filter:blur(20px);
 }
 
 .logo{
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:8px;
 }
 
 .logo img{
-    width:40px;height:40px;border-radius:10px;
+    width:35px;height:35px;border-radius:8px;
 }
 
-.container{
+/* CENTER SCREEN */
+.center{
     display:flex;
     justify-content:center;
     align-items:center;
-    height:90vh;
+    min-height:calc(100vh - 60px);
+    padding:15px;
 }
 
-/* GLASS CARD */
+/* CARD */
 .card{
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(20px);
-    border-radius:20px;
-    padding:30px;
-    width:320px;
-    box-shadow:0 0 40px rgba(0,0,0,0.6);
-    text-align:center;
+    width:100%;
+    max-width:350px;
+    background:rgba(255,255,255,0.05);
+    padding:20px;
+    border-radius:15px;
 }
 
 input,button{
@@ -54,45 +55,53 @@ input,button{
     padding:12px;
     margin:8px 0;
     border:none;
-    border-radius:10px;
+    border-radius:8px;
 }
 
 button{
-    background:linear-gradient(45deg,#22c55e,#4ade80);
+    background:#22c55e;
     color:white;
-    cursor:pointer;
 }
 
-.link{color:#38bdf8;cursor:pointer;margin-top:10px;}
+.link{
+    text-align:center;
+    color:#38bdf8;
+    margin-top:10px;
+}
 
 /* PANELS */
-#dashboard,#admin{display:none;padding:20px;}
+#dashboard,#admin{display:none;padding:15px;}
 
 .box{
     background:rgba(255,255,255,0.05);
-    padding:15px;
-    border-radius:15px;
+    padding:12px;
+    border-radius:10px;
     margin:10px 0;
+}
+
+img{border-radius:10px;}
+
+@media(max-width:500px){
+    .card{padding:15px;}
 }
 </style>
 </head>
 
 <body>
 
-<!-- HEADER -->
 <div class="header">
     <div class="logo">
-        <img id="bankLogo" src="">
-        <h2>Majshan Bank</h2>
+        <img id="bankLogo">
+        <b>Majshan Bank</b>
     </div>
     <button onclick="logout()">Logout</button>
 </div>
 
-<div class="container">
+<div class="center">
 
 <!-- LOGIN -->
 <div class="card" id="loginBox">
-<h2>Login</h2>
+<h3>Login</h3>
 <input id="loginCard" placeholder="Card Number">
 <input id="loginPin" type="password" placeholder="PIN">
 <button onclick="login()">Login</button>
@@ -102,7 +111,7 @@ button{
 
 <!-- SIGNUP -->
 <div class="card" id="signupBox" style="display:none;">
-<h2>Signup</h2>
+<h3>Signup</h3>
 <input id="sName" placeholder="Name">
 <input id="sPin" placeholder="PIN">
 <button onclick="createAccount()">Create</button>
@@ -116,20 +125,18 @@ button{
 <h2>Dashboard</h2>
 
 <div class="box">
-<img id="profile" width="80"><br>
+<img id="profile" width="70"><br>
 <p id="name"></p>
 <p>Balance: <span id="balance"></span></p>
 </div>
 
 <div class="box">
-<h3>Send Money</h3>
 <input id="toCard" placeholder="Receiver Card">
 <input id="amount" placeholder="Amount">
-<button onclick="sendMoney()">Send</button>
+<button onclick="sendMoney()">Send Money</button>
 </div>
 
 <div class="box">
-<h3>Message</h3>
 <input id="msg" placeholder="Message">
 <button onclick="sendMessage()">Send</button>
 </div>
@@ -142,15 +149,13 @@ button{
 <h2>Admin Panel</h2>
 
 <div class="box">
-<h3>Create Account</h3>
 <input id="aName" placeholder="Name">
 <input id="aPin" placeholder="PIN">
-<button onclick="createAccount()">Create</button>
+<button onclick="createAccount()">Create Account</button>
 </div>
 
 <div class="box">
-<h3>Set Bank Logo</h3>
-<input id="logoUrl" placeholder="Enter Logo URL">
+<input id="logoUrl" placeholder="Logo URL">
 <button onclick="setLogo()">Update Logo</button>
 </div>
 
@@ -174,68 +179,86 @@ const db=getFirestore(app);
 const auth=getAuth();
 const provider=new GoogleAuthProvider();
 
-/* LOAD LOGO */
-async function loadLogo(){
-    const ref=doc(db,"settings","branding");
-    const snap=await getDoc(ref);
-    if(snap.exists()){
-        bankLogo.src=snap.data().logo;
-    }else{
-        bankLogo.src="https://via.placeholder.com/40";
-    }
-}
-loadLogo();
+/* FIXED LOGIN */
+window.login=async()=>{
+const card=loginCard.value.trim();
+const pin=loginPin.value.trim();
 
-/* SET LOGO */
-window.setLogo=async()=>{
-    await setDoc(doc(db,"settings","branding"),{
-        logo:logoUrl.value
-    });
-    loadLogo();
+if(card.length<4 || pin.length<2){
+alert("Enter valid details");return;
+}
+
+let snap=await getDocs(collection(db,"accounts"));
+let found=null;
+
+snap.forEach(d=>{
+let x=d.data();
+if(x.card===card && x.pin===pin){
+found=d;
+}
+});
+
+if(!found){
+alert("Wrong card or PIN");
+return;
+}
+
+localStorage.setItem("user",found.id);
+
+if(found.data().role==="admin"){
+loadAdmin();
+}else{
+loadUser();
+}
+};
+
+/* GOOGLE LOGIN FIX */
+window.googleLogin=async()=>{
+try{
+let res=await signInWithPopup(auth,provider);
+let snap=await getDocs(collection(db,"accounts"));
+
+let found=null;
+snap.forEach(d=>{
+if(d.data().googleUid===res.user.uid){
+found=d;
+}
+});
+
+if(!found){
+alert("Account not linked");return;
+}
+
+localStorage.setItem("user",found.id);
+loadUser();
+
+}catch(e){
+alert("Google login failed");
+}
 };
 
 /* UI SWITCH */
 window.showSignup=()=>{loginBox.style.display="none";signupBox.style.display="block";}
 window.showLogin=()=>{signupBox.style.display="none";loginBox.style.display="block";}
 
-/* LOGIN */
-window.login=async()=>{
-let snap=await getDocs(collection(db,"accounts"));
-let found=null;
-snap.forEach(d=>{
-let x=d.data();
-if(x.card==loginCard.value && x.pin==loginPin.value){found=d;}
-});
-if(!found){alert("Invalid");return;}
-localStorage.setItem("user",found.id);
-found.data().role=="admin"?loadAdmin():loadUser();
-};
-
-/* GOOGLE LOGIN */
-window.googleLogin=async()=>{
-let res=await signInWithPopup(auth,provider);
-let snap=await getDocs(collection(db,"accounts"));
-snap.forEach(d=>{
-if(d.data().googleUid==res.user.uid){
-localStorage.setItem("user",d.id);
-loadUser();
-}
-});
-};
-
-/* CREATE ACCOUNT */
+/* CREATE */
 window.createAccount=async()=>{
 let name=aName?.value||sName.value;
 let pin=aPin?.value||sPin.value;
+
+if(!name||!pin){alert("Fill fields");return;}
 
 let card="";
 for(let i=0;i<16;i++){card+=Math.floor(Math.random()*10);}
 
 await setDoc(doc(collection(db,"accounts")),{
-name,pin,card,role:"user",balance:0,
+name,pin,card,
+role:"user",
+balance:0,
 photo:"https://via.placeholder.com/100",
 googleUid:null
 });
+
 alert("Card: "+card);
 };
 
@@ -247,6 +270,7 @@ dashboard.style.display="block";
 
 let snap=await getDoc(doc(db,"accounts",localStorage.getItem("user")));
 let d=snap.data();
+
 name.innerText=d.name;
 balance.innerText=d.balance;
 profile.src=d.photo;
@@ -259,41 +283,52 @@ admin.style.display="block";
 
 let snap=await getDocs(collection(db,"accounts"));
 users.innerHTML="";
+
 snap.forEach(d=>{
 let x=d.data();
 users.innerHTML+=`
 <div class="box">
 ${x.name} | ${x.balance}
-<button onclick="edit('${d.id}')">Edit</button>
+<button onclick="editUser('${d.id}')">Edit</button>
 </div>`;
 });
 }
 
-window.edit=async(id)=>{
+window.editUser=async(id)=>{
 let val=prompt("Balance:");
 await updateDoc(doc(db,"accounts",id),{balance:+val});
 loadAdmin();
 };
 
-/* SEND MONEY */
+/* SEND MONEY FIX */
 window.sendMoney=async()=>{
+let amt=parseInt(amount.value);
+
+if(!amt || amt<=0){
+alert("Invalid amount");return;
+}
+
 let all=await getDocs(collection(db,"accounts"));
 let receiver=null;
 
 all.forEach(d=>{
-if(d.data().card==toCard.value){receiver=d;}
+if(d.data().card===toCard.value){
+receiver=d;
+}
 });
 
-if(!receiver){alert("Not found");return;}
+if(!receiver){alert("User not found");return;}
 
 let senderRef=doc(db,"accounts",localStorage.getItem("user"));
 let sender=(await getDoc(senderRef)).data();
 let rec=receiver.data();
 
-if(sender.role!="minister" && sender.balance<amount.value){alert("Low");return;}
+if(sender.role!=="minister" && sender.balance<amt){
+alert("Low balance");return;
+}
 
-if(sender.role!="minister"){sender.balance-=+amount.value;}
-rec.balance+=+amount.value;
+if(sender.role!=="minister"){sender.balance-=amt;}
+rec.balance+=amt;
 
 await updateDoc(senderRef,{balance:sender.balance});
 await updateDoc(doc(db,"accounts",receiver.id),{balance:rec.balance});
@@ -303,30 +338,16 @@ loadUser();
 
 /* MESSAGE */
 window.sendMessage=async()=>{
+if(!msg.value){return;}
 await setDoc(doc(collection(db,"messages")),{
 msg:msg.value,user:localStorage.getItem("user")
 });
+msg.value="";
 alert("Sent");
-};
-
-/* LINK GOOGLE */
-window.linkGoogle=async()=>{
-let res=await signInWithPopup(auth,provider);
-await updateDoc(doc(db,"accounts",localStorage.getItem("user")),{
-googleUid:res.user.uid
-});
-alert("Linked");
 };
 
 /* LOGOUT */
 window.logout=()=>{localStorage.clear();location.reload();}
-
-/* AUTO LOGIN */
-let u=localStorage.getItem("user");
-if(u){
-let s=await getDoc(doc(db,"accounts",u));
-s.data().role=="admin"?loadAdmin():loadUser();
-}
 </script>
 
 </body>
