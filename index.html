@@ -1,233 +1,315 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Majshan Bank</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #0f172a;
-            color: white;
-            text-align: center;
-        }
-        input, button {
-            padding: 10px;
-            margin: 8px;
-            width: 220px;
-        }
-        button {
-            background: #22c55e;
-            border: none;
-            color: white;
-            cursor: pointer;
-        }
-        .hidden { display: none; }
-        img { border-radius: 10px; }
-        .box {
-            border: 1px solid #444;
-            padding: 15px;
-            margin: 10px;
-        }
-    </style>
+<title>Majshan Bank</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+
+body{
+    background: linear-gradient(135deg,#0f172a,#1e293b);
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+/* Glass Card */
+.card{
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
+    border-radius:20px;
+    padding:30px;
+    width:320px;
+    box-shadow:0 0 40px rgba(0,0,0,0.6);
+    text-align:center;
+}
+
+h2{margin-bottom:15px;}
+
+input{
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border:none;
+    border-radius:10px;
+    outline:none;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(45deg,#22c55e,#4ade80);
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{opacity:0.9;}
+
+.link{
+    margin-top:10px;
+    cursor:pointer;
+    color:#38bdf8;
+}
+
+/* Dashboard */
+#dashboard,#admin{display:none;width:90%;max-width:800px;}
+
+.top{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:20px;
+}
+
+.box{
+    background:rgba(255,255,255,0.05);
+    padding:15px;
+    border-radius:15px;
+    margin:10px 0;
+}
+
+img{border-radius:10px;}
+
+</style>
 </head>
+
 <body>
 
-<h1>Majshan Bank</h1>
-
 <!-- LOGIN -->
-<div id="loginBox">
-    <input id="card" placeholder="Card Number"><br>
-    <input id="pin" type="password" placeholder="PIN"><br>
-    <button onclick="login()">Login</button>
+<div class="card" id="loginBox">
+<h2>Login</h2>
+<input id="loginCard" placeholder="Card Number">
+<input id="loginPin" type="password" placeholder="PIN">
+<button onclick="login()">Login</button>
+<button onclick="googleLogin()">Login with Google</button>
+<div class="link" onclick="showSignup()">Create Account</div>
+</div>
+
+<!-- SIGNUP (ADMIN ONLY ACCESS LATER) -->
+<div class="card" id="signupBox" style="display:none;">
+<h2>Signup (Admin)</h2>
+<input id="sName" placeholder="Name">
+<input id="sPin" placeholder="PIN">
+<button onclick="createAccount()">Create Account</button>
+<div class="link" onclick="showLogin()">Back to Login</div>
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="hidden">
-    <h2>Dashboard</h2>
-    <img id="profile" width="100"><br>
+<div id="dashboard">
+<div class="top">
+<h2>Dashboard</h2>
+<button onclick="logout()">Logout</button>
+</div>
 
-    <p>Name: <span id="name"></span></p>
-    <p>CNIC: <span id="cnic"></span></p>
-    <p>CL: <span id="cl"></span></p>
-    <p>Balance: <span id="balance"></span></p>
+<div class="box">
+<img id="profile" width="80"><br>
+<p id="name"></p>
+<p>Balance: <span id="balance"></span></p>
+</div>
 
-    <div class="box">
-        <h3>Send Money</h3>
-        <input id="toCard" placeholder="Receiver Card"><br>
-        <input id="amount" placeholder="Amount"><br>
-        <button onclick="sendMoney()">Send</button>
-    </div>
+<div class="box">
+<h3>Send Money</h3>
+<input id="toCard" placeholder="Receiver Card">
+<input id="amount" placeholder="Amount">
+<button onclick="sendMoney()">Send</button>
+</div>
 
-    <div class="box">
-        <h3>Messages</h3>
-        <input id="msg" placeholder="Message"><br>
-        <button onclick="sendMessage()">Send</button>
-        <ul id="messages"></ul>
-    </div>
+<div class="box">
+<h3>Message</h3>
+<input id="msg" placeholder="Message">
+<button onclick="sendMessage()">Send</button>
+</div>
 
-    <button onclick="logout()">Logout</button>
+<button onclick="linkGoogle()">Link Google</button>
 </div>
 
 <!-- ADMIN -->
-<div id="adminPanel" class="hidden">
-    <h2>Admin Panel</h2>
-    <div id="users"></div>
-    <button onclick="logout()">Logout</button>
+<div id="admin">
+<div class="top">
+<h2>Admin Panel</h2>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="box">
+<h3>Create Account</h3>
+<input id="aName" placeholder="Name">
+<input id="aPin" placeholder="PIN">
+<button onclick="createAccount()">Create</button>
+</div>
+
+<div id="users"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
 import {
-  getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, collection
+getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import {
+getAuth,GoogleAuthProvider,signInWithPopup
+} from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCbho9Xz750QHAGzvQK2H0ymZyXEvVvhZs",
-  authDomain: "mathsappdb-ea7d8.firebaseapp.com",
-  projectId: "mathsappdb-ea7d8",
+const app=initializeApp({
+apiKey:"AIzaSyCbho9Xz750QHAGzvQK2H0ymZyXEvVvhZs",
+authDomain:"mathsappdb-ea7d8.firebaseapp.com",
+projectId:"mathsappdb-ea7d8"
+});
+
+const db=getFirestore(app);
+const auth=getAuth();
+const provider=new GoogleAuthProvider();
+
+/* UI SWITCH */
+window.showSignup=()=>{loginBox.style.display="none";signupBox.style.display="block";}
+window.showLogin=()=>{signupBox.style.display="none";loginBox.style.display="block";}
+
+/* LOGIN */
+window.login=async()=>{
+let snap=await getDocs(collection(db,"accounts"));
+let found=null;
+
+snap.forEach(d=>{
+let x=d.data();
+if(x.card==loginCard.value && x.pin==loginPin.value){found=d;}
+});
+
+if(!found){alert("Invalid");return;}
+
+localStorage.setItem("user",found.id);
+
+if(found.data().role=="admin"){loadAdmin();}
+else{loadUser();}
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+/* GOOGLE LOGIN */
+window.googleLogin=async()=>{
+let res=await signInWithPopup(auth,provider);
+let snap=await getDocs(collection(db,"accounts"));
 
-let currentUser = null;
-
-// LOGIN
-window.login = async function () {
-    const card = cardInput.value;
-    const pin = pinInput.value;
-
-    const ref = doc(db, "accounts", card);
-    const snap = await getDoc(ref);
-
-    if (!snap.exists()) {
-        alert("Account not found");
-        return;
-    }
-
-    const data = snap.data();
-
-    if (data.pin != pin) {
-        alert("Wrong PIN");
-        return;
-    }
-
-    localStorage.setItem("user", card);
-
-    if (data.role === "admin") {
-        showAdmin();
-    } else {
-        showDashboard();
-    }
+snap.forEach(d=>{
+if(d.data().googleUid==res.user.uid){
+localStorage.setItem("user",d.id);
+loadUser();
+}
+});
 };
 
-// LOAD USER
-async function showDashboard() {
-    loginBox.classList.add("hidden");
-    dashboard.classList.remove("hidden");
+/* CREATE ACCOUNT */
+window.createAccount=async()=>{
+let name=aName?.value||sName.value;
+let pin=aPin?.value||sPin.value;
 
-    const card = localStorage.getItem("user");
-    const snap = await getDoc(doc(db, "accounts", card));
-    const data = snap.data();
+let card="";
+for(let i=0;i<16;i++){card+=Math.floor(Math.random()*10);}
 
-    currentUser = data;
+await setDoc(doc(collection(db,"accounts")),{
+name,pin,card,
+role:"user",
+balance:0,
+photo:"https://via.placeholder.com/100",
+googleUid:null
+});
 
-    name.innerText = data.name || "";
-    cnic.innerText = data.cnic || "";
-    cl.innerText = data.cl || "";
-    balance.innerText = data.balance || 0;
-    profile.src = data.photo || "https://via.placeholder.com/100";
+alert("Card: "+card);
+};
+
+/* LOAD USER */
+async function loadUser(){
+loginBox.style.display="none";
+signupBox.style.display="none";
+dashboard.style.display="block";
+
+let ref=doc(db,"accounts",localStorage.getItem("user"));
+let snap=await getDoc(ref);
+let d=snap.data();
+
+name.innerText=d.name;
+balance.innerText=d.balance;
+profile.src=d.photo;
 }
 
-// SEND MONEY
-window.sendMoney = async function () {
-    const to = toCard.value;
-    const amt = parseInt(amount.value);
+/* ADMIN */
+async function loadAdmin(){
+loginBox.style.display="none";
+admin.style.display="block";
 
-    const senderRef = doc(db, "accounts", localStorage.getItem("user"));
-    const receiverRef = doc(db, "accounts", to);
+let snap=await getDocs(collection(db,"accounts"));
+users.innerHTML="";
 
-    const senderSnap = await getDoc(senderRef);
-    const receiverSnap = await getDoc(receiverRef);
-
-    if (!receiverSnap.exists()) {
-        alert("Receiver not found");
-        return;
-    }
-
-    let sender = senderSnap.data();
-    let receiver = receiverSnap.data();
-
-    if (sender.role !== "minister") {
-        if (sender.balance < amt) {
-            alert("Low balance");
-            return;
-        }
-        sender.balance -= amt;
-    }
-
-    receiver.balance += amt;
-
-    await updateDoc(senderRef, { balance: sender.balance });
-    await updateDoc(receiverRef, { balance: receiver.balance });
-
-    alert("Transaction done");
-    showDashboard();
-};
-
-// MESSAGE
-window.sendMessage = async function () {
-    await setDoc(doc(collection(db, "messages")), {
-        from: localStorage.getItem("user"),
-        text: msg.value,
-        time: Date.now()
-    });
-    alert("Message sent");
-};
-
-// ADMIN
-async function showAdmin() {
-    loginBox.classList.add("hidden");
-    adminPanel.classList.remove("hidden");
-
-    const snap = await getDocs(collection(db, "accounts"));
-
-    users.innerHTML = "";
-
-    snap.forEach(docSnap => {
-        const d = docSnap.data();
-        users.innerHTML += `
-            <div class="box">
-                <p>${d.name} | Balance: ${d.balance}</p>
-                <button onclick="editUser('${docSnap.id}')">Edit</button>
-            </div>
-        `;
-    });
+snap.forEach(d=>{
+let x=d.data();
+users.innerHTML+=`
+<div class="box">
+${x.name} | ${x.balance}
+<button onclick="edit('${d.id}')">Edit</button>
+</div>`;
+});
 }
 
-// EDIT USER
-window.editUser = async function (card) {
-    const val = prompt("New Balance:");
-    await updateDoc(doc(db, "accounts", card), {
-        balance: parseInt(val)
-    });
-    showAdmin();
+window.edit=async(id)=>{
+let val=prompt("Balance:");
+await updateDoc(doc(db,"accounts",id),{balance:+val});
+loadAdmin();
 };
 
-// LOGOUT
-window.logout = function () {
-    localStorage.removeItem("user");
-    location.reload();
+/* SEND MONEY */
+window.sendMoney=async()=>{
+let senderRef=doc(db,"accounts",localStorage.getItem("user"));
+let receiverSnap;
+
+let all=await getDocs(collection(db,"accounts"));
+all.forEach(d=>{
+if(d.data().card==toCard.value){receiverSnap=d;}
+});
+
+if(!receiverSnap){alert("Not found");return;}
+
+let sender=(await getDoc(senderRef)).data();
+let receiver=receiverSnap.data();
+
+if(sender.role!="minister" && sender.balance<amount.value){alert("Low");return;}
+
+if(sender.role!="minister"){sender.balance-=+amount.value;}
+receiver.balance+=+amount.value;
+
+await updateDoc(senderRef,{balance:sender.balance});
+await updateDoc(doc(db,"accounts",receiverSnap.id),{balance:receiver.balance});
+
+loadUser();
 };
 
-// AUTO LOGIN
-const saved = localStorage.getItem("user");
-if (saved) {
-    const snap = await getDoc(doc(db, "accounts", saved));
-    if (snap.exists() && snap.data().role === "admin") {
-        showAdmin();
-    } else {
-        showDashboard();
-    }
+/* MESSAGE */
+window.sendMessage=async()=>{
+await setDoc(doc(collection(db,"messages")),{
+msg:msg.value,
+user:localStorage.getItem("user")
+});
+alert("Sent");
+};
+
+/* LINK GOOGLE */
+window.linkGoogle=async()=>{
+let res=await signInWithPopup(auth,provider);
+await updateDoc(doc(db,"accounts",localStorage.getItem("user")),{
+googleUid:res.user.uid
+});
+alert("Linked");
+};
+
+/* LOGOUT */
+window.logout=()=>{localStorage.clear();location.reload();}
+
+/* AUTO LOGIN */
+let u=localStorage.getItem("user");
+if(u){
+let s=await getDoc(doc(db,"accounts",u));
+if(s.data().role=="admin")loadAdmin();
+else loadUser();
 }
 </script>
 
