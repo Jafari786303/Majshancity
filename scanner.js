@@ -67,58 +67,46 @@ function processVideoFrame(video, canvas, bitStreamDisplay) {
             src.data.set(imageData.data);
             src.copyTo(dst);
 
-            // 1. Convert to Grayscale & Blur heavy to erase the small dots
+            // 1. Heavy noise reduction filter to eliminate tiny speck spots
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-            let ksize = new cv.Size(9, 9); // Increased blur radius to destroy small noise dots
+            let ksize = new cv.Size(9, 9); 
             cv.GaussianBlur(gray, blurred, ksize, 0, 0, cv.BORDER_DEFAULT);
             
-            // 2. High-contrast thresholding
+            // 2. High-contrast adaptive thresholding
             cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 4);
-            
-            // 3. Find structural lines
             cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
             let detectedShapes = [];
-
-            // Colors for our tracking borders
-            let cyan = new cv.Scalar(34, 211, 238, 255);   // #22d3ee
-            let emerald = new cv.Scalar(16, 185, 129, 255); // #10b981
+            let cyan = new cv.Scalar(34, 211, 238, 255);   
+            let emerald = new cv.Scalar(16, 185, 129, 255); 
 
             for (let i = 0; i < contours.size(); ++i) {
                 let contour = contours.get(i);
                 let area = cv.contourArea(contour);
 
-                // CRITICAL FILTER: Completely ignore shapes that are too small (dots) or too massive
+                // Ignore micro dots (anything below 400 pixels in area)
                 if (area < 400 || area > 50000) {
                     contour.delete();
                     continue;
                 }
 
-                // Approximate the shape geometry
                 let approx = new cv.Mat();
                 let perimeter = cv.arcLength(contour, true);
                 cv.approxPolyDP(contour, approx, 0.04 * perimeter, true);
-
                 let rect = cv.boundingRect(contour);
                 
-                // If it has 4 corners, it's a Rectangle or Square
+                // 4-sided structural box boundaries (Square/Rectangle)
                 if (approx.rows() === 4) {
-                    // Draw a perfect bounding box rectangle over it
                     let point1 = new cv.Point(rect.x, rect.y);
                     let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
                     cv.rectangle(dst, point1, point2, cyan, 2, cv.LINE_8, 0);
-                    
-                    // Save center coordinate and type (1 for square/rectangle)
                     detectedShapes.push({ x: rect.x + (rect.width / 2), type: "1" });
                 } 
-                // If it has more corners, it's a curve / Circle
+                // Curved structural boundaries (Circle)
                 else if (approx.rows() > 4) {
-                    // Draw a perfect tracking circle over it
                     let center = new cv.Point(rect.x + (rect.width / 2), rect.y + (rect.height / 2));
                     let radius = Math.round((rect.width + rect.height) / 4);
                     cv.circle(dst, center, radius, emerald, 2, cv.LINE_AA, 0);
-                    
-                    // Save center coordinate and type (0 for circle)
                     detectedShapes.push({ x: rect.x + (rect.width / 2), type: "0" });
                 }
 
@@ -128,22 +116,18 @@ function processVideoFrame(video, canvas, bitStreamDisplay) {
 
             cv.imshow('canvasOutput', dst);
 
-            // 4. LINE PATTERN CONVERSION: Sort shapes from left to right along the screen
+            // 3. Process spatial layout positioning (Left to Right)
             if (detectedShapes.length > 0) {
-                // Sort array based on the 'x' coordinate (left to right)
                 detectedShapes.sort((a, b) => a.x - b.x);
-
-                // Build pattern string from the sorted shapes
                 let patternString = detectedShapes.map(s => s.type).join('');
                 
-                // Pad with zeros or limit to 8 bits to match registration requirements
                 if (patternString.length > 8) patternString = patternString.substring(0, 8);
                 let finalPattern = patternString.padEnd(8, '0');
 
                 window.activeScanPattern = finalPattern;
                 bitStreamDisplay.innerText = finalPattern;
 
-                // Auto-Login Trigger
+                // 4. RAPID AUTO TRIGGER ENFORCEMENT
                 const currentPinInput = document.getElementById('loginPin').value;
                 if (currentPinInput.length === 6 && !isAuthenticating) {
                     autoVerifyCredentials();
@@ -164,16 +148,34 @@ function processVideoFrame(video, canvas, bitStreamDisplay) {
     setTimeout(renderLoop, 0);
 }
 
+// Rapid Fire Authentication Validation Logic
 async function autoVerifyCredentials() {
     isAuthenticating = true;
+    
     if (typeof window.attemptLogin === 'function') {
         const pinElement = document.getElementById('loginPin');
-        pinElement.style.borderColor = "#10b981"; 
+        const originalBorder = pinElement.style.borderColor;
+        pinElement.style.borderColor = "#10b981"; // Flash Emerald indicating processing sync
+        
+        // Target dashboard elements from your main HTML setup window scope
+        const dashboard = document.getElementById('dashboardModules');
+        
+        // Execute verification call
         await window.attemptLogin();
+        
+        // Check if authentication failed based on whether dashboard interface remains locked down
         setTimeout(() => {
-            pinElement.style.borderColor = "";
+            const hasAccess = !dashboard.classList.contains('opacity-40');
+            
+            if (!hasAccess) {
+                // If dashboard is still locked after script execution, trigger error alert immediately
+                alert("Authentication Failure: Invalid security PIN credentials.");
+                pinElement.value = ""; // Empty input to reset interface state
+            }
+            
+            pinElement.style.borderColor = originalBorder;
             isAuthenticating = false;
-        }, 1500); 
+        }, 1000); 
     } else {
         isAuthenticating = false;
     }
