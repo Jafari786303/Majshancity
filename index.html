@@ -3,337 +3,527 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High-Precision Shape Pattern Scanner</title>
+    <title>Majshan City - Virtual OS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        h1 {
-            color: #00adb5;
-            margin-bottom: 10px;
-        }
-
-        .container {
-            position: relative;
-            width: 100%;
-            max-width: 640px;
-            background: #1e1e1e;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
-
-        #videoContainer {
-            position: relative;
-            width: 100%;
-            height: auto;
-            overflow: hidden;
-            border-radius: 8px;
-            border: 2px solid #333;
-        }
-
-        video {
-            display: none;
-        }
-
-        canvas {
-            width: 100%;
-            display: block;
-        }
-
-        .overlay-grid {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px dashed #00adb5;
-            width: 90%;
-            height: 40%;
-            pointer-events: none;
-            box-sizing: border-box;
-        }
-
-        .overlay-text {
-            position: absolute;
-            top: 5px;
-            left: 10px;
-            color: #00adb5;
-            font-size: 12px;
-            font-weight: bold;
-            background: rgba(0,0,0,0.6);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        #statusBox {
-            margin-top: 15px;
-            background: #252525;
-            padding: 15px;
-            border-radius: 8px;
-            width: 100%;
-            box-sizing: border-box;
-            border-left: 5px solid #00adb5;
-        }
-
-        .live-bits {
-            font-size: 24px;
-            font-family: monospace;
-            letter-spacing: 4px;
-            color: #ffe600;
-            margin: 5px 0;
-        }
-
-        #profileCard {
-            margin-top: 20px;
-            width: 100%;
-            max-width: 400px;
-            background: linear-gradient(135deg, #2b5876, #4e4376);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-            display: none;
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .card-header {
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #e0e0e0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 5px;
-            margin-bottom: 15px;
-        }
-
-        .card-body {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .avatar {
-            width: 70px;
-            height: 70px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-        }
-
-        .user-info h2 {
-            margin: 0;
-            font-size: 22px;
-            color: #fff;
-        }
-        .user-info p {
-            margin: 5px 0 0 0;
-            color: #ddd;
-            font-size: 14px;
-        }
-
-        #loading {
-            font-size: 18px;
-            color: #ffe600;
-        }
+        .hidden-panel { display: none; }
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
-<body>
+<body class="bg-slate-900 min-h-screen">
 
-    <h1>Shape Pattern ID Scanner</h1>
-    <p id="loading">Loading Computer Vision Engine (OpenCV)... Please wait.</p>
-
-    <div class="container" style="display:none;" id="appContainer">
-        <div id="videoContainer">
-            <video id="videoInput" playsinline></video>
-            <canvas id="canvasOutput"></canvas>
-            <div class="overlay-grid">
-                <div class="overlay-text">ALIGN 8 SHAPES HERE</div>
+    <div class="relative w-full h-64 bg-slate-800 overflow-hidden shadow-2xl border-b border-slate-700">
+        <div id="slider" class="w-full h-full flex transition-transform duration-700 ease-in-out">
+            <div class="min-w-full h-full bg-cover bg-center flex items-end p-8" style="background-image: linear-gradient(to top, rgba(15,23,42,0.9), rgba(0,0,0,0)), url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=80')">
+                <div>
+                    <h1 class="text-4xl font-extrabold tracking-wider text-cyan-400">MAJSHAN CITY</h1>
+                    <p class="text-slate-300 mt-2 text-lg">The Digital Frontier & Smart Administration System</p>
+                </div>
             </div>
-        </div>
-
-        <div id="statusBox">
-            <div><strong>Current Detected Pattern:</strong></div>
-            <div id="bitStream" class="live-bits">--------</div>
-            <div id="systemMessage">Searching for 8 valid shapes...</div>
-        </div>
-    </div>
-
-    <div id="profileCard">
-        <div class="card-header">Access Granted // Identity Verified</div>
-        <div class="card-body">
-            <div class="avatar" id="cardAvatar">👤</div>
-            <div class="user-info">
-                <h2 id="cardName">John Doe</h2>
-                <p id="cardRole">Authorized Personnel</p>
-                <p id="cardUID" style="font-family: monospace; font-size:11px; color:#bbb; margin-top:5px;"></p>
+            <div class="min-w-full h-full bg-cover bg-center flex items-end p-8" style="background-image: linear-gradient(to top, rgba(15,23,42,0.9), rgba(0,0,0,0)), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80')">
+                <div>
+                    <h1 class="text-4xl font-extrabold tracking-wider text-emerald-400">SECURE BANKING</h1>
+                    <p class="text-slate-300 mt-2 text-lg">Instant Peer-to-Peer Transactions & Audited Ledgers</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript" onload="onOpenCvReady();"></script>
-
-    <script>
-        const video = document.getElementById('videoInput');
-        const canvas = document.getElementById('canvasOutput');
-        const ctx = canvas.getContext('2d');
+    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        const ACCOUNTS = {
-            "10010101": { name: "Muhammad", role: "System Administrator", avatar: "👑" },
-            "01101110": { name: "Hassan", role: "Senior Security Engineer", avatar: "🛡️" },
-            "00010110": { name: "Hussain", role: "Database Architect", avatar: "💻" }
-        };
-
-        let src, dst, gray, ready = false;
-
-        function onOpenCvReady() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'block';
-            startCamera();
-        }
-
-        function startCamera() {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 640, height: 480 } })
-                .then(function(stream) {
-                    video.srcObject = stream;
-                    video.play();
-                    video.addEventListener('canplay', () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
-                        dst = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
-                        gray = new cv.Mat();
-                        ready = true;
-                        requestAnimationFrame(processVideo);
-                    });
-                })
-                .catch(function(err) {
-                    console.error("Camera Error: ", err);
-                    document.getElementById('systemMessage').innerText = "Camera access denied or unavailable.";
-                });
-        }
-
-        function processVideo() {
-            if (!ready) return;
-
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            src.data.set(imageData.data);
-
-            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-            cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
-
-            let contours = new cv.MatVector();
-            let hierarchy = new cv.Mat();
-            cv.findContours(gray, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-            let detectedShapes = [];
-
-            for (let i = 0; i < contours.size(); ++i) {
-                let cnt = contours.get(i);
-                let area = cv.contourArea(cnt);
-                let perimeter = cv.arcLength(cnt, true);
-                
-                if (area > 150 && area < (canvas.width * canvas.height * 0.2)) {
-                    let approx = new cv.Mat();
-                    cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
-
-                    let rect = cv.boundingRect(cnt);
-                    let aspectRatio = rect.width / rect.height;
-
-                    if (aspectRatio >= 0.7 && aspectRatio <= 1.3) {
-                        let shapeType = null;
-
-                        if (approx.rows === 4) {
-                            shapeType = "1"; 
-                        } else if (approx.rows > 5) {
-                            let circularity = (4 * Math.PI * area) / (perimeter * perimeter);
-                            if (circularity > 0.7) {
-                                shapeType = "0"; 
-                            }
-                        }
-
-                        if (shapeType !== null) {
-                            detectedShapes.push({
-                                type: shapeType,
-                                x: rect.x + rect.width / 2,
-                                y: rect.y + rect.height / 2,
-                                box: rect
-                            });
-                        }
-                    }
-                    // FIXED: Explicitly deleted approx within the loop definition to prevent instant leaks
-                    approx.delete();
-                }
-            }
-
-            detectedShapes.sort((a, b) => a.x - b.x);
-
-            if (detectedShapes.length > 8) {
-                detectedShapes = detectedShapes.slice(0, 8); 
-            }
-
-            detectedShapes.forEach(shape => {
-                ctx.strokeStyle = shape.type === "0" ? "#00ff00" : "#ff00ff";
-                ctx.lineWidth = 3;
-                ctx.strokeRect(shape.box.x, shape.box.y, shape.box.width, shape.box.height);
-                
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 16px Arial";
-                ctx.fillText(shape.type, shape.x - 5, shape.y + 5);
-            });
-
-            if (detectedShapes.length === 8) {
-                let codePattern = detectedShapes.map(s => s.type).join("");
-                document.getElementById('bitStream').innerText = codePattern;
-                document.getElementById('bitStream').style.color = "#00ff00";
-
-                if (ACCOUNTS[codePattern]) {
-                    triggerLogin(codePattern, ACCOUNTS[codePattern]);
-                } else {
-                    document.getElementById('systemMessage').innerText = "Pattern recognized. Access Denied: Unknown ID.";
-                }
-            } else {
-                document.getElementById('bitStream').innerText = detectedShapes.map(s => s.type).join("") + "_".repeat(Math.max(0, 8 - detectedShapes.length));
-                document.getElementById('bitStream').style.color = "#ffe600";
-                document.getElementById('systemMessage').innerText = `Scanning... Found (${detectedShapes.length}/8) shapes.`;
-            }
-
-            // FIXED: Cleaned up every remaining WebAssembly allocated object 
-            contours.delete();
-            hierarchy.delete();
-
-            requestAnimationFrame(processVideo);
-        }
-
-        let lastLoggedInPattern = "";
-        function triggerLogin(pattern, accountData) {
-            if (lastLoggedInPattern === pattern) return; 
-            lastLoggedInPattern = pattern;
-
-            const card = document.getElementById('profileCard');
-            document.getElementById('cardAvatar').innerText = accountData.avatar;
-            document.getElementById('cardName').innerText = accountData.name;
-            document.getElementById('cardRole').innerText = accountData.role;
-            document.getElementById('cardUID').innerText = `PATTERN ID: ${pattern}`;
+        <div class="lg:col-span-1 space-y-6">
             
-            card.style.display = "block";
-            document.getElementById('systemMessage').innerHTML = `<span style="color:#00ff00; font-weight:bold;">Welcome back, ${accountData.name}!</span>`;
+            <div id="authBox" class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2">🔒 Biometric Gate Access</h2>
+                
+                <div id="scannerSection" class="relative bg-black rounded-xl overflow-hidden border border-slate-600 mb-4 h-48">
+                    <video id="videoInput" class="hidden" playsinline></video>
+                    <canvas id="canvasOutput" class="w-full h-full object-cover"></canvas>
+                    <div class="absolute inset-0 border-2 border-dashed border-cyan-500/50 m-4 pointer-events-none flex items-center justify-center">
+                        <span class="text-xs text-cyan-400 bg-slate-900/80 px-2 py-1 rounded">ALIGN PATTERN SHAPES</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-semibold text-slate-400 tracking-wider uppercase">Secure 6-Digit PIN</label>
+                    <input type="password" id="loginPin" maxlength="6" placeholder="••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl tracking-widest text-emerald-400 focus:outline-none focus:border-cyan-500 transition-colors">
+                    <div id="bitStream" class="text-center font-mono text-amber-400 tracking-widest text-sm py-1 bg-slate-900/50 rounded-lg">--------</div>
+                    <button onclick="attemptLogin()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-cyan-600/20 cursor-pointer">Verify Credentials</button>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-slate-700 text-center">
+                    <button onclick="toggleView('registerBox', true)" class="text-sm text-slate-400 hover:text-cyan-400 underline">Need a citizen account? Register here</button>
+                </div>
+            </div>
+
+            <div id="registerBox" class="hidden-panel bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <h2 class="text-xl font-bold text-emerald-400 mb-4">Register New Citizen</h2>
+                <div class="space-y-4">
+                    <input type="text" id="regName" placeholder="Full Name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm">
+                    <input type="text" id="regJob" placeholder="Occupation / Designation" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm">
+                    <input type="password" id="regPin" maxlength="6" placeholder="Choose 6-Digit PIN" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm tracking-wider">
+                    <input type="text" id="regPattern" maxlength="8" placeholder="Biometric Pattern (e.g. 10010101)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono">
+                    <div class="flex gap-2">
+                        <button onclick="registerCitizen()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-sm">Create Profile</button>
+                        <button onclick="toggleView('registerBox', false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 rounded-xl text-sm">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="citizenCard" class="hidden-panel bg-gradient-to-br from-indigo-900 via-slate-800 to-blue-900 p-6 rounded-3xl border border-indigo-500/30 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-16 -bottom-16 w-44 h-44 bg-cyan-500/10 rounded-full blur-3xl"></div>
+                <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-4">
+                    <div>
+                        <span class="text-xs uppercase tracking-widest text-indigo-400 font-bold">Majshan National Card</span>
+                        <h3 id="cardName" class="text-2xl font-black text-white mt-1">---</h3>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block">Balance</span>
+                        <span id="cardBalance" class="text-xl font-bold text-emerald-400">$0.00</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
+                    <div><span class="text-slate-400 text-xs block">DESIGNATION</span><span id="cardJob" class="font-medium text-slate-200">---</span></div>
+                    <div><span class="text-slate-400 text-xs block">NATIONAL ID</span><span id="cardUid" class="font-mono text-cyan-300 font-bold">---</span></div>
+                    <div><span class="text-slate-400 text-xs block">PATTERN CODE</span><span id="cardPattern" class="font-mono text-amber-400 tracking-widest">---</span></div>
+                    <div><span class="text-slate-400 text-xs block">SECURITY KEY</span><span id="cardPin" class="font-mono text-rose-400">******</span></div>
+                </div>
+                <button onclick="logout()" class="w-full mt-6 bg-slate-900/60 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-800 text-xs text-slate-400 hover:text-rose-400 py-2 rounded-xl transition-all">Revoke Session / Logout</button>
+            </div>
+        </div>
+
+        <div id="dashboardModules" class="lg:col-span-2 space-y-6 opacity-40 pointer-events-none transition-opacity duration-500">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                    <h3 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">💸 Clearing House Wire Transfer</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Target National ID</label>
+                            <input type="text" id="txTarget" placeholder="Enter recipient ID" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Amount ($)</label>
+                            <input type="number" id="txAmount" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm font-semibold text-emerald-400">
+                        </div>
+                        <button onclick="executeTransaction()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-all">Authorize Electronic Transfer</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col h-full">
+                    <h3 class="text-lg font-bold text-amber-400 mb-2 flex items-center gap-2">📜 City Codex & Laws</h3>
+                    <div id="lawBookContainer" class="bg-slate-900 p-4 rounded-xl flex-1 text-sm text-slate-300 overflow-y-auto max-h-40 leading-relaxed border border-slate-800">
+                        Loading code of laws...
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <h3 class="text-lg font-bold text-purple-400 mb-4">📂 Legal Document Notary & Registry</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-semibold text-slate-300">File New Request</h4>
+                        <select id="docType" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300">
+                            <option value="Plot Title Deed">Plot Title Deed</option>
+                            <option value="Business Ownership Transfer">Business Ownership Transfer</option>
+                            <option value="Employment Agreement">Employment Agreement</option>
+                            <option value="Mutual Non-Disclosure Contract">Mutual Non-Disclosure Contract</option>
+                        </select>
+                        <textarea id="docStatement" placeholder="Provide full explicit legal statement context..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm h-20 text-slate-300"></textarea>
+                        <input type="text" id="docInvolved" placeholder="Involved Party National ID (Who should agree)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono">
+                        <button onclick="fileDocumentRequest()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl text-sm">Submit to Administrative Routing</button>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-300 mb-2">Your Certified Documents</h4>
+                        <div id="userDocumentsContainer" class="space-y-2 overflow-y-auto max-h-56 pr-1">
+                            <div class="text-xs text-slate-500 text-center py-4">Authenticate profile to display active legal deeds.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <h3 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">💬 Encrypted Mesh Network Chat</h3>
+                <div id="chatBox" class="bg-slate-900 p-4 rounded-xl h-48 overflow-y-auto mb-3 space-y-2 border border-slate-800 text-sm"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="chatMsg" placeholder="Broadcast message across grid..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 text-sm text-slate-200">
+                    <select id="chatEmoji" onchange="insertEmoji()" class="bg-slate-700 text-white rounded-xl px-2 text-sm">
+                        <option value="">😀</option>
+                        <option value="👑">👑</option>
+                        <option value="🏢">🏢</option>
+                        <option value="💰">💰</option>
+                        <option value="⚖️">⚖️</option>
+                    </select>
+                    <button onclick="sendChatMessage()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2 rounded-xl text-sm transition-colors">Send</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="adminPanel" class="hidden-panel fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 p-8 overflow-y-auto">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center border-b border-rose-900/50 pb-4 mb-6">
+                <div>
+                    <h2 class="text-3xl font-black text-rose-500 tracking-wider">🚨 ADMINISTRATIVE TERMINAL ACCESS</h2>
+                    <p class="text-slate-400 text-sm mt-1">Superuser Root Matrix overrides engaged.</p>
+                </div>
+                <button onclick="closeAdmin()" class="bg-rose-900 hover:bg-rose-800 border border-rose-600 text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer">Terminate Terminal Connection</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-slate-900 p-6 rounded-2xl border border-rose-950 shadow-xl">
+                    <h3 class="text-lg font-bold text-slate-200 mb-4">Global Ledger Registry</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                                    <th class="py-2">UID</th>
+                                    <th>Name</th>
+                                    <th>Job</th>
+                                    <th>Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUserTable" class="divide-y divide-slate-800/40 text-slate-300"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-slate-900 p-6 rounded-2xl border border-rose-950 shadow-xl">
+                        <h3 class="text-md font-bold text-slate-200 mb-3">Modify Law Codex</h3>
+                        <textarea id="adminLawsInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-amber-400 h-32 font-mono"></textarea>
+                        <button onclick="updateSystemLaws()" class="w-full mt-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs">Publish Codex Changes</button>
+                    </div>
+
+                    <div class="bg-slate-900 p-6 rounded-2xl border border-rose-950 shadow-xl">
+                        <h3 class="text-md font-bold text-slate-200 mb-3">Pending Global Deeds Management</h3>
+                        <div id="adminDocsPending" class="space-y-3 max-h-48 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+            }
         }
     </script>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, arrayUnion, getDocs } from "firebase/firestore";
+
+        // Firebase Configuration Interface
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqU1WlN2uHuryajckt3mATBH7Iu1euSNg",
+            authDomain: "majshanweb-e99cd.firebaseapp.com",
+            projectId: "majshanweb-e99cd",
+            storageBucket: "majshanweb-e99cd.firebasestorage.app",
+            messagingSenderId: "231414719508",
+            appId: "1:231414719508:web:b6417a0f1430f03cb2f301",
+            measurementId: "G-RQYEQZZJ8Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global State Objects
+        let currentUser = null;
+        let globalUsersCache = {};
+        window.activeScanPattern = ""; 
+
+        // Image Slider Functionality
+        let currentSlide = 0;
+        setInterval(() => {
+            currentSlide = (currentSlide + 1) % 2;
+            document.getElementById('slider').style.transform = `translateX(-${currentSlide * 100}%)`;
+        }, 5000);
+
+        // UI Component Toggles
+        window.toggleView = function(id, status) {
+            document.getElementById(id).style.display = status ? 'block' : 'none';
+        }
+
+        // Account Registration Module
+        window.registerCitizen = async function() {
+            const name = document.getElementById('regName').value.trim();
+            const job = document.getElementById('regJob').value.trim();
+            const pin = document.getElementById('regPin').value.trim();
+            const pattern = document.getElementById('regPattern').value.trim();
+            
+            if(!name || !job || pin.length !== 6 || pattern.length !== 8) {
+                alert("Missing required fields or configuration metrics are invalid.");
+                return;
+            }
+
+            const uid = Math.floor(100000 + Math.random() * 900000).toString(); // Secure 6 digit unique citizen ID
+            
+            await setDoc(doc(db, "users", uid), {
+                uid: uid,
+                name: name,
+                job: job,
+                pin: pin,
+                pattern: pattern,
+                balance: 5000 // Starting city welcome stipend
+            });
+
+            alert(`Citizen profile verified. Assigned National UID: ${uid}`);
+            toggleView('registerBox', false);
+        }
+
+        // Real-Time Authentication Bridge
+        window.attemptLogin = async function() {
+            const enteredPin = document.getElementById('loginPin').value;
+            const scanPattern = window.activeScanPattern;
+
+            if(!enteredPin || !scanPattern) {
+                alert("Please type your PIN and display your pattern code to the camera.");
+                return;
+            }
+
+            const q = query(collection(db, "users"));
+            const querySnapshot = await getDocs(q);
+            let verified = false;
+
+            querySnapshot.forEach((userDoc) => {
+                const data = userDoc.data();
+                if(data.pin === enteredPin && data.pattern === scanPattern) {
+                    currentUser = data;
+                    verified = true;
+                }
+            });
+
+            if(verified) {
+                document.getElementById('authBox').style.display = 'none';
+                setupActiveSession();
+            } else {
+                alert("Biometric verification or Security PIN validation failed.");
+            }
+        }
+
+        function setupActiveSession() {
+            // Unshackle the interactive dashboard fields
+            document.getElementById('dashboardModules').classList.remove('opacity-40', 'pointer-events-none');
+            
+            // Listen to real-time citizen changes (balances, items)
+            onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+                if(docSnap.exists()) {
+                    currentUser = docSnap.data();
+                    document.getElementById('cardName').innerText = currentUser.name;
+                    document.getElementById('cardJob').innerText = currentUser.job;
+                    document.getElementById('cardBalance').innerText = `$${currentUser.balance.toFixed(2)}`;
+                    document.getElementById('cardUid').innerText = `#${currentUser.uid}`;
+                    document.getElementById('cardPattern').innerText = currentUser.pattern;
+                    toggleView('citizenCard', true);
+                }
+            });
+
+            // Stream user documents
+            onSnapshot(collection(db, "documents"), (snap) => {
+                const container = document.getElementById('userDocumentsContainer');
+                container.innerHTML = '';
+                snap.forEach(dDoc => {
+                    const d = dDoc.data();
+                    if((d.owner === currentUser.uid || d.involved === currentUser.uid) && d.status === "Approved") {
+                        container.innerHTML += `
+                            <div class="bg-slate-900 p-3 rounded-xl border border-purple-900/40 text-xs">
+                                <div class="font-bold text-purple-400">${d.type}</div>
+                                <p class="text-slate-300 mt-1 italic">"${d.statement}"</p>
+                                <div class="text-[10px] text-slate-500 mt-2">Validated by Administrative Records</div>
+                            </div>`;
+                    }
+                });
+                if(container.innerHTML === '') container.innerHTML = '<div class="text-xs text-slate-500 text-center py-4">No approved deeds on record.</div>';
+            });
+        }
+
+        window.logout = function() {
+            location.reload();
+        }
+
+        // Electronic Transaction Processing Matrix
+        window.executeTransaction = async function() {
+            const target = document.getElementById('txTarget').value.trim();
+            const amount = parseFloat(document.getElementById('txAmount').value);
+
+            if(!target || isNaN(amount) || amount <= 0) {
+                alert("Transaction metric values are invalid.");
+                return;
+            }
+            if(currentUser.balance < amount) {
+                alert("Wire Transfer Denied: Insufficient Capital Liquid Reserve.");
+                return;
+            }
+
+            const targetRef = doc(db, "users", target);
+            const targetSnap = await getDoc(targetRef);
+
+            if(!targetSnap.exists()) {
+                alert("Target routing destination not found in registry.");
+                return;
+            }
+
+            await updateDoc(doc(db, "users", currentUser.uid), { balance: currentUser.balance - amount });
+            await updateDoc(targetRef, { balance: targetSnap.data().balance + amount });
+            
+            alert("Funds safely routed over encrypted banking grid lines.");
+            document.getElementById('txTarget').value = '';
+            document.getElementById('txAmount').value = '';
+        }
+
+        // Legal Notary System
+        window.fileDocumentRequest = async function() {
+            const type = document.getElementById('docType').value;
+            const statement = document.getElementById('docStatement').value.trim();
+            const involved = document.getElementById('docInvolved').value.trim();
+
+            if(!statement || !involved) {
+                alert("Provide complete statements and counter-party information.");
+                return;
+            }
+
+            const docId = "DOC-" + Date.now();
+            await setDoc(doc(db, "documents", docId), {
+                id: docId,
+                type: type,
+                statement: statement,
+                owner: currentUser.uid,
+                involved: involved,
+                status: "Pending"
+            });
+
+            alert("Document submitted to Administrative Queue.");
+            document.getElementById('docStatement').value = '';
+            document.getElementById('docInvolved').value = '';
+        }
+
+        // Central System Law Stream
+        onSnapshot(doc(db, "system", "laws"), (snap) => {
+            const box = document.getElementById('lawBookContainer');
+            if(snap.exists()) {
+                box.innerHTML = snap.data().text.replace(/\n/g, '<br>');
+                document.getElementById('adminLawsInput').value = snap.data().text;
+            } else {
+                box.innerText = "No municipal codes issued yet.";
+            }
+        });
+
+        // Chat Module
+        window.sendChatMessage = async function() {
+            const msg = document.getElementById('chatMsg').value.trim();
+            if(!msg || !currentUser) return;
+
+            await setDoc(doc(db, "chat", "msg-" + Date.now()), {
+                sender: currentUser.name,
+                text: msg,
+                timestamp: Date.now()
+            });
+            document.getElementById('chatMsg').value = '';
+        }
+
+        window.insertEmoji = function() {
+            const em = document.getElementById('chatEmoji').value;
+            document.getElementById('chatMsg').value += em;
+            document.getElementById('chatEmoji').value = "";
+        }
+
+        onSnapshot(collection(db, "chat"), (snap) => {
+            const box = document.getElementById('chatBox');
+            let msgs = [];
+            snap.forEach(d => msgs.push(d.data()));
+            msgs.sort((a,b) => a.timestamp - b.timestamp);
+            
+            box.innerHTML = msgs.map(m => `
+                <div><strong class="text-cyan-400">${m.sender}:</strong> <span class="text-slate-200">${m.text}</span></div>
+            `).join('');
+            box.scrollTop = box.scrollHeight;
+        });
+
+        // --- Superuser Admin Control Matrix Trigger Logic ---
+        let keyBuffer = "";
+        document.addEventListener('keydown', (e) => {
+            keyBuffer += e.key.toLowerCase();
+            if(keyBuffer.includes("adminsusu")) {
+                keyBuffer = "";
+                openAdminConsole();
+            }
+            if(keyBuffer.length > 20) keyBuffer = keyBuffer.substring(10);
+        });
+
+        async function openAdminConsole() {
+            document.getElementById('adminPanel').style.display = 'block';
+            
+            // Watch all users for full dashboard table
+            onSnapshot(collection(db, "users"), (snap) => {
+                const tbody = document.getElementById('adminUserTable');
+                tbody.innerHTML = '';
+                snap.forEach(uDoc => {
+                    const u = uDoc.data();
+                    globalUsersCache[u.uid] = u;
+                    tbody.innerHTML += `
+                        <tr class="border-b border-slate-800/50 text-xs">
+                            <td class="py-3 font-mono font-bold text-cyan-400">${u.uid}</td>
+                            <td>${u.name}</td>
+                            <td>${u.job}</td>
+                            <td><input type="number" id="bal-${u.uid}" value="${u.balance}" class="bg-slate-950 border border-slate-800 text-emerald-400 font-bold px-2 py-1 rounded w-24"></td>
+                            <td>
+                                <button onclick="adminSaveUser('${u.uid}')" class="bg-emerald-600 px-2 py-1 rounded font-bold text-white text-[10px]">Save</button>
+                            </td>
+                        </tr>`;
+                });
+            });
+
+            // Watch pending documents
+            onSnapshot(collection(db, "documents"), (snap) => {
+                const container = document.getElementById('adminDocsPending');
+                container.innerHTML = '';
+                snap.forEach(dDoc => {
+                    const d = dDoc.data();
+                    if(d.status === "Pending") {
+                        container.innerHTML += `
+                            <div class="bg-slate-950 p-3 rounded-xl border border-rose-950 text-xs">
+                                <div class="font-bold text-slate-200 mb-1">${d.type}</div>
+                                <p class="text-slate-400 italic">"${d.statement}"</p>
+                                <div class="flex gap-2 mt-3">
+                                    <button onclick="adminApproveDoc('${d.id}', true)" class="bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px]">Approve</button>
+                                    <button onclick="adminApproveDoc('${d.id}', false)" class="bg-rose-700 text-white font-bold px-2 py-1 rounded text-[10px]">Reject</button>
+                                </div>
+                            </div>`;
+                    }
+                });
+                if(container.innerHTML === "") container.innerHTML = '<div class="text-xs text-slate-600">No documents requiring attention.</div>';
+            });
+        }
+
+        window.adminSaveUser = async function(uid) {
+            const newBal = parseFloat(document.getElementById(`bal-${uid}`).value);
+            await updateDoc(doc(db, "users", uid), { balance: newBal });
+            alert("Financial reserves modified successfully.");
+        }
+
+        window.adminApproveDoc = async function(id, status) {
+            await updateDoc(doc(db, "documents", id), { status: status ? "Approved" : "Rejected" });
+        }
+
+        window.updateSystemLaws = async function() {
+            const txt = document.getElementById('adminLawsInput').value;
+            await setDoc(doc(db, "system", "laws"), { text: txt });
+            alert("Law ledger system updated.");
+        }
+
+        window.closeAdmin = function() {
+            document.getElementById('adminPanel').style.display = 'none';
+        }
+    </script>
+    
+    <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
+    <script src="scanner.js" type="text/javascript"></script>
 </body>
 </html>
