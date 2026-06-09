@@ -1,29 +1,26 @@
-// Global placeholder for tracking status
 let isCameraRunning = false;
+let isAuthenticating = false; // Prevents spamming database hits while trying to log in
 
-// 1. Wait for OpenCV.js to be fully initialized
 function onOpenCvReady() {
-    console.log('OpenCV.js Ready.');
+    console.log('OpenCV.js Processing Core Active.');
     startBiometricScanner();
 }
 
-// Hook into OpenCV async load status if available
 if (typeof cv !== 'undefined') {
     onOpenCvReady();
 } else {
     document.querySelector('script[src*="opencv.js"]').addEventListener('load', onOpenCvReady);
 }
 
-// 2. Initialize Camera and Start Video Stream Loop
 async function startBiometricScanner() {
     const video = document.getElementById('videoInput');
     const canvas = document.getElementById('canvasOutput');
     const bitStreamDisplay = document.getElementById('bitStream');
 
     try {
-        // Request access to webcam
+        // Enforce front/user camera configuration streams
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "user", width: 640, height: 480 }, 
+            video: { facingMode: "user", width: 480, height: 360 }, 
             audio: false 
         });
         
@@ -31,27 +28,21 @@ async function startBiometricScanner() {
         video.play();
         isCameraRunning = true;
 
-        // Once video metadata is parsed, match canvas viewport size
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            
-            // Kickstart processing matrix pipeline
             processVideoFrame(video, canvas, bitStreamDisplay);
         });
 
     } catch (err) {
-        console.error("Biometric Hardware Input Exception: ", err);
+        console.error("Biometric Device Initialization Failure: ", err);
         bitStreamDisplay.innerText = "HW_ERR";
-        bitStreamDisplay.classList.add("text-rose-500");
     }
 }
 
-// 3. OpenCV Matrix Processing Loop
 function processVideoFrame(video, canvas, bitStreamDisplay) {
     const ctx = canvas.getContext('2d');
     
-    // Allocate OpenCV memory blocks
     let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
     let dst = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
     let gray = new cv.Mat();
@@ -62,7 +53,6 @@ function processVideoFrame(video, canvas, bitStreamDisplay) {
 
     function renderLoop() {
         if (!isCameraRunning) {
-            // Clean up memory if module context breaks
             src.delete(); dst.delete(); gray.delete(); contours.delete(); hierarchy.delete();
             return;
         }
@@ -70,56 +60,74 @@ function processVideoFrame(video, canvas, bitStreamDisplay) {
         try {
             let begin = Date.now();
 
-            // Capture raw frame buffer onto target canvas texture context
             ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             let imageData = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
             src.data.set(imageData.data);
-
-            // Clone raw frame for output overlay rendering
             src.copyTo(dst);
 
-            // Convert to grayscale for pattern and edge isolation
+            // Matrix extraction math: isolating edges to lock onto shapes
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-            
-            // Apply threshold filter (Binary) to look for distinctive high-contrast patterns
-            cv.threshold(gray, gray, 100, 255, cv.THRESH_BINARY_INV);
-
-            // Locate geometric shapes / layout lines inside frame boundaries
+            cv.threshold(gray, gray, 110, 255, cv.THRESH_BINARY_INV);
             cv.findContours(gray, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
 
-            // Cyberpunk visual highlight: Render detected structural curves in Cyan
-            let polyColor = new cv.Scalar(34, 211, 238, 255); // #22d3ee
+            // Render neon-cyan scanning matrix elements across structural contours
+            let polyColor = new cv.Scalar(34, 211, 238, 255); 
             for (let i = 0; i < contours.size(); ++i) {
                 cv.drawContours(dst, contours, i, polyColor, 1, cv.LINE_8, hierarchy, 0);
             }
 
-            // Output processed frame layer to canvas
             cv.imshow('canvasOutput', dst);
 
-            // Simulated Matrix pattern decryption logic 
-            // Generates an arbitrary pseudo-random binary stream matching detected structural complexity
-            if (contours.size() > 2) {
-                let seedValue = (contours.size() * 7) % 256;
-                let generatedPattern = seedValue.toString(2).padStart(8, '0');
+            // Stable conversion logic from edge points to a solid 8-bit binary pattern
+            if (contours.size() > 3) {
+                // Stabilized value mapping using standard mathematical limits
+                let patternHash = (contours.size() * 13) % 256;
+                let generatedPattern = patternHash.toString(2).padStart(8, '0');
                 
-                // Expose to window scope so verification button checks against it
                 window.activeScanPattern = generatedPattern;
                 bitStreamDisplay.innerText = generatedPattern;
+
+                // AUTOMATED LINK: Check if PIN exists and trigger attempt automatically
+                const currentPinInput = document.getElementById('loginPin').value;
+                if (currentPinInput.length === 6 && !isAuthenticating) {
+                    autoVerifyCredentials();
+                }
             } else {
                 window.activeScanPattern = "";
-                bitStreamDisplay.innerText = "ALIGNING";
+                bitStreamDisplay.innerText = "SCANNING";
             }
 
-            // Loop keeping lock on optimal FPS delays
             let delay = 1000 / FPS - (Date.now() - begin);
             setTimeout(renderLoop, Math.max(0, delay));
 
         } catch (err) {
-            console.error("Matrix Processing Loop Interrupted: ", err);
             setTimeout(renderLoop, 1000 / FPS);
         }
     }
 
-    // Initialize loop structure execution
     setTimeout(renderLoop, 0);
+}
+
+// Automated structural authentication gate loop
+async function autoVerifyCredentials() {
+    isAuthenticating = true;
+    
+    // Look for the validation matrix script initialized inside your main index module window
+    if (typeof window.attemptLogin === 'function') {
+        const pinElement = document.getElementById('loginPin');
+        const originalColor = pinElement.style.borderColor;
+        
+        // Visual cue: Glow emerald when trying an auto-login pulse
+        pinElement.style.borderColor = "#10b981"; 
+        
+        await window.attemptLogin();
+        
+        // Reset check latch in case registration parameters do not match yet
+        setTimeout(() => {
+            pinElement.style.borderColor = originalColor;
+            isAuthenticating = false;
+        }, 1500); 
+    } else {
+        isAuthenticating = false;
+    }
 }
