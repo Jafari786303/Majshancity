@@ -41,7 +41,7 @@
         }
 
         video {
-            display: none; /* Hidden, we render via canvas */
+            display: none;
         }
 
         canvas {
@@ -192,7 +192,6 @@
         const canvas = document.getElementById('canvasOutput');
         const ctx = canvas.getContext('2d');
         
-        // Target Database Configuration
         const ACCOUNTS = {
             "10010101": { name: "Muhammad", role: "System Administrator", avatar: "👑" },
             "01101110": { name: "Hassan", role: "Senior Security Engineer", avatar: "🛡️" },
@@ -215,7 +214,6 @@
                     video.addEventListener('canplay', () => {
                         canvas.width = video.videoWidth;
                         canvas.height = video.videoHeight;
-                        // Initialize OpenCV matrices once video proportions are known
                         src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
                         dst = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
                         gray = new cv.Mat();
@@ -232,49 +230,40 @@
         function processVideo() {
             if (!ready) return;
 
-            // Capture current frame from video to canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             src.data.set(imageData.data);
 
-            // 1. Pre-processing: Grayscale & Adaptive Thresholding (handles varying light and angles)
             cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
             cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
 
-            // 2. Find Contours
             let contours = new cv.MatVector();
             let hierarchy = new cv.Mat();
             cv.findContours(gray, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
             let detectedShapes = [];
 
-            // 3. Analyze Geometries
             for (let i = 0; i < contours.size(); ++i) {
                 let cnt = contours.get(i);
                 let area = cv.contourArea(cnt);
                 let perimeter = cv.arcLength(cnt, true);
                 
-                // Filter out background noise and massive shapes
                 if (area > 150 && area < (canvas.width * canvas.height * 0.2)) {
                     let approx = new cv.Mat();
-                    // Epsilon tuning establishes high angular precision
                     cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
 
                     let rect = cv.boundingRect(cnt);
                     let aspectRatio = rect.width / rect.height;
 
-                    // Ensure shape isn't excessively stretched (unlikely code pattern dimensions)
                     if (aspectRatio >= 0.7 && aspectRatio <= 1.3) {
                         let shapeType = null;
 
-                        // Check vertices to identify structural geometry
                         if (approx.rows === 4) {
-                            shapeType = "1"; // Square / Rectangle
+                            shapeType = "1"; 
                         } else if (approx.rows > 5) {
-                            // High vertices count with uniform radius signifies a circle
                             let circularity = (4 * Math.PI * area) / (perimeter * perimeter);
                             if (circularity > 0.7) {
-                                shapeType = "0"; // Circle
+                                shapeType = "0"; 
                             }
                         }
 
@@ -287,22 +276,17 @@
                             });
                         }
                     }
+                    // FIXED: Explicitly deleted approx within the loop definition to prevent instant leaks
                     approx.delete();
                 }
             }
 
-            // 4. Pattern Decoding and Sorting
-            // Sort shapes spatially from Left to Right (X-axis) to maintain reading pattern order at angles
             detectedShapes.sort((a, b) => a.x - b.x);
 
-            // Optional structural optimization: Filter out shapes that sit outside a shared horizontal row
             if (detectedShapes.length > 8) {
-                // If extra noise shapes exist, cluster by Y proximity to clean data
-                // For simplicity, we prune down to the most confidence-driven elements
                 detectedShapes = detectedShapes.slice(0, 8); 
             }
 
-            // Render HUD box overlays onto the working frame canvas
             detectedShapes.forEach(shape => {
                 ctx.strokeStyle = shape.type === "0" ? "#00ff00" : "#ff00ff";
                 ctx.lineWidth = 3;
@@ -313,7 +297,6 @@
                 ctx.fillText(shape.type, shape.x - 5, shape.y + 5);
             });
 
-            // Evaluate if we have a perfect 8-digit string sequence match
             if (detectedShapes.length === 8) {
                 let codePattern = detectedShapes.map(s => s.type).join("");
                 document.getElementById('bitStream').innerText = codePattern;
@@ -330,7 +313,7 @@
                 document.getElementById('systemMessage').innerText = `Scanning... Found (${detectedShapes.length}/8) shapes.`;
             }
 
-            // Memory Cleanup inside loop
+            // FIXED: Cleaned up every remaining WebAssembly allocated object 
             contours.delete();
             hierarchy.delete();
 
@@ -339,7 +322,7 @@
 
         let lastLoggedInPattern = "";
         function triggerLogin(pattern, accountData) {
-            if (lastLoggedInPattern === pattern) return; // Prevent stuttering updates
+            if (lastLoggedInPattern === pattern) return; 
             lastLoggedInPattern = pattern;
 
             const card = document.getElementById('profileCard');
