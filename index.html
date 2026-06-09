@@ -1,322 +1,356 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Majshan Bank</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Precision Shape Pattern Scanner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
-body{background:linear-gradient(135deg,#0f172a,#1e293b);color:white;}
+        h1 {
+            color: #00adb5;
+            margin-bottom: 10px;
+        }
 
-.header{
-display:flex;justify-content:space-between;align-items:center;
-padding:10px;background:rgba(255,255,255,0.05);
-}
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
 
-.logo{display:flex;align-items:center;gap:8px;}
-.logo img{width:35px;height:35px;border-radius:8px;}
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: auto;
+            overflow: hidden;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
 
-.center{
-display:flex;justify-content:center;align-items:center;
-min-height:calc(100vh - 60px);padding:10px;
-}
+        video {
+            display: none; /* Hidden, we render via canvas */
+        }
 
-.card{
-width:100%;max-width:350px;
-background:rgba(255,255,255,0.05);
-padding:20px;border-radius:15px;
-}
+        canvas {
+            width: 100%;
+            display: block;
+        }
 
-input,button{
-width:100%;padding:12px;margin:8px 0;
-border:none;border-radius:8px;
-}
+        .overlay-grid {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px dashed #00adb5;
+            width: 90%;
+            height: 40%;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
 
-button{background:#22c55e;color:white;}
+        .overlay-text {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            color: #00adb5;
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
 
-.link{text-align:center;color:#38bdf8;margin-top:10px;}
+        #statusBox {
+            margin-top: 15px;
+            background: #252525;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            border-left: 5px solid #00adb5;
+        }
 
-#dashboard,#admin{display:none;padding:15px;}
+        .live-bits {
+            font-size: 24px;
+            font-family: monospace;
+            letter-spacing: 4px;
+            color: #ffe600;
+            margin: 5px 0;
+        }
 
-.box{
-background:rgba(255,255,255,0.05);
-padding:12px;border-radius:10px;margin:10px 0;
-}
+        #profileCard {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #2b5876, #4e4376);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
 
-img{border-radius:10px;}
-</style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #e0e0e0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+
+        .card-body {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .avatar {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .user-info h2 {
+            margin: 0;
+            font-size: 22px;
+            color: #fff;
+        }
+        .user-info p {
+            margin: 5px 0 0 0;
+            color: #ddd;
+            font-size: 14px;
+        }
+
+        #loading {
+            font-size: 18px;
+            color: #ffe600;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="header">
-<div class="logo">
-<img id="bankLogo">
-<b>Majshan Bank</b>
-</div>
-<button onclick="logout()">Logout</button>
-</div>
+    <h1>Shape Pattern ID Scanner</h1>
+    <p id="loading">Loading Computer Vision Engine (OpenCV)... Please wait.</p>
 
-<div class="center">
+    <div class="container" style="display:none;" id="appContainer">
+        <div id="videoContainer">
+            <video id="videoInput" playsinline></video>
+            <canvas id="canvasOutput"></canvas>
+            <div class="overlay-grid">
+                <div class="overlay-text">ALIGN 8 SHAPES HERE</div>
+            </div>
+        </div>
 
-<!-- LOGIN -->
-<div class="card" id="loginBox">
-<h3>Login</h3>
-<input id="loginCard" placeholder="Card Number">
-<input id="loginPin" type="password" placeholder="PIN">
-<button onclick="login()">Login</button>
-<button onclick="googleLogin()">Google Login</button>
-<div class="link" onclick="showSignup()">Create Account</div>
-</div>
+        <div id="statusBox">
+            <div><strong>Current Detected Pattern:</strong></div>
+            <div id="bitStream" class="live-bits">--------</div>
+            <div id="systemMessage">Searching for 8 valid shapes...</div>
+        </div>
+    </div>
 
-<!-- SIGNUP -->
-<div class="card" id="signupBox" style="display:none;">
-<h3>Signup</h3>
-<input id="sName" placeholder="Name">
-<input id="sPin" placeholder="PIN">
-<input type="file" id="sPhoto" accept="image/*">
-<button onclick="createAccount()">Create</button>
-<div class="link" onclick="showLogin()">Back</div>
-</div>
+    <div id="profileCard">
+        <div class="card-header">Access Granted // Identity Verified</div>
+        <div class="card-body">
+            <div class="avatar" id="cardAvatar">👤</div>
+            <div class="user-info">
+                <h2 id="cardName">John Doe</h2>
+                <p id="cardRole">Authorized Personnel</p>
+                <p id="cardUID" style="font-family: monospace; font-size:11px; color:#bbb; margin-top:5px;"></p>
+            </div>
+        </div>
+    </div>
 
-</div>
+    <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript" onload="onOpenCvReady();"></script>
 
-<!-- DASHBOARD -->
-<div id="dashboard">
-<h2>Dashboard</h2>
+    <script>
+        const video = document.getElementById('videoInput');
+        const canvas = document.getElementById('canvasOutput');
+        const ctx = canvas.getContext('2d');
+        
+        // Target Database Configuration
+        const ACCOUNTS = {
+            "10010101": { name: "Muhammad", role: "System Administrator", avatar: "👑" },
+            "01101110": { name: "Hassan", role: "Senior Security Engineer", avatar: "🛡️" },
+            "00010110": { name: "Hussain", role: "Database Architect", avatar: "💻" }
+        };
 
-<div class="box" style="text-align:center;">
-<img id="profile" width="80"><br>
-<h3 id="name"></h3>
-<p>Balance: <span id="balance"></span></p>
-</div>
+        let src, dst, gray, ready = false;
 
-<div class="box">
-<input id="toCard" placeholder="Receiver Card">
-<input id="amount" placeholder="Amount">
-<button onclick="sendMoney()">Send Money</button>
-</div>
+        function onOpenCvReady() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            startCamera();
+        }
 
-<div class="box">
-<input id="msg" placeholder="Message">
-<button onclick="sendMessage()">Send</button>
-</div>
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 640, height: 480 } })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                    video.addEventListener('canplay', () => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        // Initialize OpenCV matrices once video proportions are known
+                        src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+                        dst = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+                        gray = new cv.Mat();
+                        ready = true;
+                        requestAnimationFrame(processVideo);
+                    });
+                })
+                .catch(function(err) {
+                    console.error("Camera Error: ", err);
+                    document.getElementById('systemMessage').innerText = "Camera access denied or unavailable.";
+                });
+        }
 
-<button onclick="linkGoogle()">Link Google</button>
-</div>
+        function processVideo() {
+            if (!ready) return;
 
-<!-- ADMIN -->
-<div id="admin">
-<h2>Admin Panel</h2>
+            // Capture current frame from video to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            src.data.set(imageData.data);
 
-<div class="box">
-<input id="aName" placeholder="Name">
-<input id="aPin" placeholder="PIN">
-<input type="file" id="aPhoto">
-<button onclick="createAccount()">Create Account</button>
-</div>
+            // 1. Pre-processing: Grayscale & Adaptive Thresholding (handles varying light and angles)
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
 
-<div class="box">
-<input id="logoUrl" placeholder="Logo URL">
-<button onclick="setLogo()">Update Logo</button>
-</div>
+            // 2. Find Contours
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(gray, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-<div id="users"></div>
-</div>
+            let detectedShapes = [];
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc }
-from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { getAuth,GoogleAuthProvider,signInWithPopup }
-from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-import { getStorage,ref,uploadBytes,getDownloadURL }
-from "https://www.gstatic.com/firebasejs/12.12.0/firebase-storage.js";
+            // 3. Analyze Geometries
+            for (let i = 0; i < contours.size(); ++i) {
+                let cnt = contours.get(i);
+                let area = cv.contourArea(cnt);
+                let perimeter = cv.arcLength(cnt, true);
+                
+                // Filter out background noise and massive shapes
+                if (area > 150 && area < (canvas.width * canvas.height * 0.2)) {
+                    let approx = new cv.Mat();
+                    // Epsilon tuning establishes high angular precision
+                    cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
 
-let app,db,auth,storage;
+                    let rect = cv.boundingRect(cnt);
+                    let aspectRatio = rect.width / rect.height;
 
-/* FIREBASE INIT WITH ERROR DETECTION */
-try{
-app=initializeApp({
-apiKey:"AIzaSyCbho9Xz750QHAGzvQK2H0ymZyXEvVvhZs",
-authDomain:"mathsappdb-ea7d8.firebaseapp.com",
-projectId:"mathsappdb-ea7d8"
-});
+                    // Ensure shape isn't excessively stretched (unlikely code pattern dimensions)
+                    if (aspectRatio >= 0.7 && aspectRatio <= 1.3) {
+                        let shapeType = null;
 
-db=getFirestore(app);
-auth=getAuth();
-storage=getStorage(app);
+                        // Check vertices to identify structural geometry
+                        if (approx.rows === 4) {
+                            shapeType = "1"; // Square / Rectangle
+                        } else if (approx.rows > 5) {
+                            // High vertices count with uniform radius signifies a circle
+                            let circularity = (4 * Math.PI * area) / (perimeter * perimeter);
+                            if (circularity > 0.7) {
+                                shapeType = "0"; // Circle
+                            }
+                        }
 
-}catch(e){
-alert("Firebase not working: "+e.message);
-}
+                        if (shapeType !== null) {
+                            detectedShapes.push({
+                                type: shapeType,
+                                x: rect.x + rect.width / 2,
+                                y: rect.y + rect.height / 2,
+                                box: rect
+                            });
+                        }
+                    }
+                    approx.delete();
+                }
+            }
 
-/* LOGIN */
-window.login=async()=>{
-try{
-let card=loginCard.value.trim();
-let pin=loginPin.value.trim();
+            // 4. Pattern Decoding and Sorting
+            // Sort shapes spatially from Left to Right (X-axis) to maintain reading pattern order at angles
+            detectedShapes.sort((a, b) => a.x - b.x);
 
-let snap=await getDocs(collection(db,"accounts"));
-let found=null;
+            // Optional structural optimization: Filter out shapes that sit outside a shared horizontal row
+            if (detectedShapes.length > 8) {
+                // If extra noise shapes exist, cluster by Y proximity to clean data
+                // For simplicity, we prune down to the most confidence-driven elements
+                detectedShapes = detectedShapes.slice(0, 8); 
+            }
 
-snap.forEach(d=>{
-let x=d.data();
-if(x.card===card && x.pin===pin){found=d;}
-});
+            // Render HUD box overlays onto the working frame canvas
+            detectedShapes.forEach(shape => {
+                ctx.strokeStyle = shape.type === "0" ? "#00ff00" : "#ff00ff";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(shape.box.x, shape.box.y, shape.box.width, shape.box.height);
+                
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 16px Arial";
+                ctx.fillText(shape.type, shape.x - 5, shape.y + 5);
+            });
 
-if(!found){alert("Wrong details");return;}
+            // Evaluate if we have a perfect 8-digit string sequence match
+            if (detectedShapes.length === 8) {
+                let codePattern = detectedShapes.map(s => s.type).join("");
+                document.getElementById('bitStream').innerText = codePattern;
+                document.getElementById('bitStream').style.color = "#00ff00";
 
-localStorage.setItem("user",found.id);
+                if (ACCOUNTS[codePattern]) {
+                    triggerLogin(codePattern, ACCOUNTS[codePattern]);
+                } else {
+                    document.getElementById('systemMessage').innerText = "Pattern recognized. Access Denied: Unknown ID.";
+                }
+            } else {
+                document.getElementById('bitStream').innerText = detectedShapes.map(s => s.type).join("") + "_".repeat(Math.max(0, 8 - detectedShapes.length));
+                document.getElementById('bitStream').style.color = "#ffe600";
+                document.getElementById('systemMessage').innerText = `Scanning... Found (${detectedShapes.length}/8) shapes.`;
+            }
 
-/* ROLE CHECK FIX */
-if(found.data().role==="admin"){loadAdmin();}
-else{loadUser();}
+            // Memory Cleanup inside loop
+            contours.delete();
+            hierarchy.delete();
 
-}catch(e){alert("Firebase error");}
-};
+            requestAnimationFrame(processVideo);
+        }
 
-/* GOOGLE LOGIN */
-window.googleLogin=async()=>{
-try{
-let res=await signInWithPopup(auth,new GoogleAuthProvider());
-let snap=await getDocs(collection(db,"accounts"));
+        let lastLoggedInPattern = "";
+        function triggerLogin(pattern, accountData) {
+            if (lastLoggedInPattern === pattern) return; // Prevent stuttering updates
+            lastLoggedInPattern = pattern;
 
-snap.forEach(d=>{
-if(d.data().googleUid===res.user.uid){
-localStorage.setItem("user",d.id);
-loadUser();
-}
-});
-}catch(e){alert("Google login failed");}
-};
-
-/* CREATE ACCOUNT */
-window.createAccount=async()=>{
-try{
-let name=aName?.value||sName.value;
-let pin=aPin?.value||sPin.value;
-let file=(aPhoto?.files[0])||(sPhoto?.files[0]);
-
-if(!name||!pin||!file){alert("Fill all");return;}
-
-let card="";
-for(let i=0;i<16;i++){card+=Math.floor(Math.random()*10);}
-
-/* upload image */
-let r=ref(storage,"profiles/"+Date.now());
-await uploadBytes(r,file);
-let url=await getDownloadURL(r);
-
-/* detect admin creating */
-let role="user";
-let current=localStorage.getItem("user");
-
-if(current){
-let s=await getDoc(doc(db,"accounts",current));
-if(s.exists() && s.data().role==="admin"){
-role="user";
-}
-}
-
-/* CREATE */
-await setDoc(doc(collection(db,"accounts")),{
-name,pin,card,role,
-balance:0,photo:url,googleUid:null
-});
-
-alert("Card: "+card);
-
-}catch(e){alert("Firebase error");}
-};
-
-/* LOAD USER */
-async function loadUser(){
-loginBox.style.display="none";
-signupBox.style.display="none";
-dashboard.style.display="block";
-
-let s=await getDoc(doc(db,"accounts",localStorage.getItem("user")));
-let d=s.data();
-
-name.innerText=d.name;
-balance.innerText=d.balance;
-profile.src=d.photo;
-}
-
-/* ADMIN PANEL */
-async function loadAdmin(){
-loginBox.style.display="none";
-admin.style.display="block";
-
-let snap=await getDocs(collection(db,"accounts"));
-users.innerHTML="";
-
-snap.forEach(d=>{
-let x=d.data();
-users.innerHTML+=`
-<div class="box">
-${x.name} | ${x.balance} | ${x.role}
-<button onclick="editUser('${d.id}')">Edit</button>
-</div>`;
-});
-}
-
-window.editUser=async(id)=>{
-let val=prompt("Balance:");
-await updateDoc(doc(db,"accounts",id),{balance:+val});
-loadAdmin();
-};
-
-/* SEND MONEY */
-window.sendMoney=async()=>{
-try{
-let amt=parseInt(amount.value);
-if(!amt){alert("Invalid");return;}
-
-let all=await getDocs(collection(db,"accounts"));
-let receiver=null;
-
-all.forEach(d=>{
-if(d.data().card===toCard.value){receiver=d;}
-});
-
-if(!receiver){alert("Not found");return;}
-
-let senderRef=doc(db,"accounts",localStorage.getItem("user"));
-let sender=(await getDoc(senderRef)).data();
-let rec=receiver.data();
-
-/* MINISTER FIX */
-if(sender.role!=="minister" && sender.balance<amt){
-alert("Low balance");return;
-}
-
-if(sender.role!=="minister"){sender.balance-=amt;}
-rec.balance+=amt;
-
-await updateDoc(senderRef,{balance:sender.balance});
-await updateDoc(doc(db,"accounts",receiver.id),{balance:rec.balance});
-
-loadUser();
-
-}catch(e){alert("Firebase error");}
-};
-
-/* MESSAGE */
-window.sendMessage=async()=>{
-try{
-await setDoc(doc(collection(db,"messages")),{
-msg:msg.value,user:localStorage.getItem("user")
-});
-msg.value="";
-alert("Sent");
-}catch(e){alert("Firebase error");}
-};
-
-/* LOGOUT */
-window.logout=()=>{localStorage.clear();location.reload();}
-</script>
-
+            const card = document.getElementById('profileCard');
+            document.getElementById('cardAvatar').innerText = accountData.avatar;
+            document.getElementById('cardName').innerText = accountData.name;
+            document.getElementById('cardRole').innerText = accountData.role;
+            document.getElementById('cardUID').innerText = `PATTERN ID: ${pattern}`;
+            
+            card.style.display = "block";
+            document.getElementById('systemMessage').innerHTML = `<span style="color:#00ff00; font-weight:bold;">Welcome back, ${accountData.name}!</span>`;
+        }
+    </script>
 </body>
 </html>
